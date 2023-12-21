@@ -12,7 +12,7 @@
   "prettier": "@cloud-cli/prettier-config",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cloud-cli/.git"
+    "url": "https://github.com/cloud-cli/storage.git"
   },
   "publishConfig": {
     "access": "public"
