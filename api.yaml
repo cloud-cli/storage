@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+  title: FileBin v1
+  description: |-
+    A file bin service
+  license:
+    name: MIT
+  version: 1.0.0
+servers:
+  - url: __API_HOST__
+tags:
+  - name: bin
+    description: A file bin
+  - name: file
+    description: A file in a bin
+paths:
+  /bin:
+    post:
+      tags:
+        - bin
+      summary: Create a bin
+      operationId: createBin
+      responses:
+        "200":
+          description: Successful operation
+        "500":
+          description: An error
+
+  /bin/{binId}:
+    get:
+      tags:
+        - bin
+      summary: List all files in a bin
+      operationId: listBin
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Unable to remove this bin
+    delete:
+      tags:
+        - bin
+      summary: Deletes a bin and all files
+      operationId: deleteBin
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Unable to remove this bin
+  /f:
+    post:
+      tags:
+        - file
+      summary: Create file
+      operationId: createFile
+      responses:
+        "201":
+          description: File created, ready to upload
+        "500":
+          description: Failed to create the file
+  /f/{fileId}:
+    get:
+      tags:
+        - file
+      summary: Read file
+      operationId: readFile
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The file content
+        "404":
+          description: File not found
+    put:
+      tags:
+        - file
+      summary: Update a file
+      description: ""
+      operationId: updatePetWithForm
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      tags:
+        - file
+      summary: Delete a file
+      operationId: deleteFile
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
