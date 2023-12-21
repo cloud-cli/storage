@@ -8,7 +8,8 @@
     "ci": "npm i && npm run build",
     "build": "tsc",
     "test": "echo true",
-    "tdd": "jest --watchAll"
+    "tdd": "jest --watchAll",
+    "start": "node ./dist/server.js"
   },
   "prettier": "@cloud-cli/prettier-config",
   "repository": {

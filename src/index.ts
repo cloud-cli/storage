@@ -211,6 +211,19 @@ export function start(options: Options = {}) {
   const routes = createRoutes(rootDir);
 
   createServer((req, res) => {
+    const _end = res.end;
+
+    res.end = (...args) => {
+      console.log(
+        "[%s] %d %s %s",
+        new Date().toISOString(),
+        res.statusCode,
+        req.method,
+        req.url
+      );
+      return _end.apply(res, args);
+    };
+
     const url = new URL(req.url, "http://localhost");
     const [action, ...args] = url.pathname.slice(1).split("/");
     const p = { req, res, args, url };
