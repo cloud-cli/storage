@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   writeFile,
   readFile,
@@ -11,7 +12,6 @@ import {
   rmdir,
   unlink,
 } from "node:fs/promises";
-import { join } from "node:path";
 
 type RouteHandler = (p: {
   req: IncomingMessage;
@@ -57,23 +57,23 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     try {
       const payload = await readStream(req);
-      const hash = randomUUID();
+      const fileId = randomUUID();
       const meta = payload.toString("utf-8");
 
       if (meta) {
         await writeFile(
-          join(binPath, hash + ".meta"),
+          join(binPath, fileId + ".meta"),
           JSON.stringify(JSON.parse(meta))
         );
       }
 
-      await writeFile(join(binPath, hash), "");
+      await writeFile(join(binPath, fileId), "");
 
       res.setHeader(
         "location",
-        String(new URL(`/f/${binId}/${hash}`, getProxyHost(req)))
+        String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)))
       );
-      res.end(hash);
+      res.end(fileId);
     } catch (error) {
       console.log(error);
       res.writeHead(500).end();
