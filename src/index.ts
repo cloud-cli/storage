@@ -75,7 +75,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
         "location",
         String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)))
       );
-      res.end(fileId);
+      res.writeHead(201).end(`{"fileId": "${fileId}"}`);
     });
   },
 
@@ -90,6 +90,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     const writer = createWriteStream(filePath);
 
     writer.on("close", () => {
+      res.writeHead(202);
       res.end(
         JSON.stringify({
           id: fileId,
@@ -125,7 +126,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
         "location",
         String(new URL("/bin/" + binId, getProxyHost(req)))
       );
-      res.end(binId);
+      res.writeHead(201).end(`{"binId": "${binId}"}`);
     });
   },
 
@@ -168,6 +169,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   async onEsModule({ req, res }) {
     const host = getProxyHost(req);
     const file = await readFile("./filebin.mjs", "utf-8");
+    res.setHeader("content-type", "text/javascript");
     res.end(file.replace("__API_HOST__", host));
   },
 });
@@ -185,8 +187,12 @@ async function tryCatch(res, fn) {
   }
 }
 
-function getProxyHost(req) {
-  return new URL(`https://${req.headers["x-forwarded-for"] || 'localhost'}`).toString();
+function getProxyHost(req: IncomingMessage) {
+  return new URL(
+    `${req.headers["x-forwarded-proto"] || "http"}://${
+      req.headers["x-forwarded-for"] || "localhost"
+    }`
+  ).toString();
 }
 
 export type Options = { port?: Number; rootDir?: string };
@@ -248,7 +254,7 @@ export function start(options: Options = {}) {
         return routes.onDeleteBin(p);
 
       default:
-        res.writeHead(404).end("Not found");
+        notFound(res);
     }
   }).listen(Number(options.port || process.env.PORT));
 }

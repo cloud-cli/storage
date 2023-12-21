@@ -24,8 +24,8 @@ as a module in a project:
 import { createBin, createFile, writeFile } from 'https://bin.example.com/index.mjs';
 
 async function save(content) {
-  const binId = await createBin();
-  const fileId = await createFile(binId);
+  const {binId} = await createBin();
+  const {fileId} = await createFile(binId);
   await writeFile(binId, fileId, content);
 
 }

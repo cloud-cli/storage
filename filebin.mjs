@@ -9,16 +9,14 @@ export async function createBin() {
   const req = await fetch(u("/bin"), p);
 
   return req.ok
-    ? await req.text()
+    ? await req.json()
     : Promise.reject(new Error("Failed to create bin"));
 }
 
 export async function removeBin(bin) {
   const req = await fetch(u(`/bin/${bin}`), d);
 
-  return req.ok
-    ? await req.text()
-    : Promise.reject(new Error("Failed to remove bin"));
+  return req.ok || Promise.reject(new Error("Failed to remove bin"));
 }
 
 export async function listFiles(bin) {
@@ -33,7 +31,7 @@ export async function createFile(bin) {
   const req = await fetch(u(`/f/${bin}`), p);
 
   return req.ok
-    ? await req.text()
+    ? await req.json()
     : Promise.reject(new Error("Failed to create file"));
 }
 
@@ -58,6 +56,6 @@ export async function writeFile(bin, file, content) {
     body: content,
   });
   return req.ok
-    ? await req.text()
+    ? await req.json()
     : Promise.reject(new Error("Failed to update file"));
 }
