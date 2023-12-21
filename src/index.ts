@@ -24,11 +24,11 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   rootDir
 ) => ({
   async onReadFile({ args, res }) {
-    const [bin = "", fileId = ""] = args;
-    const filePath = join(rootDir, bin, fileId);
+    const [binId = "", fileId = ""] = args;
+    const filePath = join(rootDir, binId, fileId);
     const metaPath = filePath + ".meta";
 
-    if (!(bin && fileId && existsSync(filePath))) {
+    if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
     }
 
@@ -44,14 +44,14 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     const stats = await stat(filePath);
     res.setHeader("content-length", stats.size);
     res.setHeader("last-modified", new Date(stats.mtime).toString());
-    createReadStream(join(rootDir, bin, fileId)).pipe(res);
+    createReadStream(join(rootDir, binId, fileId)).pipe(res);
   },
 
   async onCreateFile({ args, req, res }) {
-    const [bin = ""] = args;
-    const binPath = join(rootDir, bin);
+    const [binId = ""] = args;
+    const binPath = join(rootDir, binId);
 
-    if (!(bin && existsSync(binPath))) {
+    if (!(binId && existsSync(binPath))) {
       return notFound(res);
     }
 
@@ -71,7 +71,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
       res.setHeader(
         "location",
-        String(new URL("/f/" + hash, getProxyHost(req)))
+        String(new URL(`/f/${binId}/${hash}`, getProxyHost(req)))
       );
       res.end(hash);
     } catch (error) {
@@ -104,10 +104,10 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   },
 
   async onReadBin({ args, res }) {
-    const [bin = ""] = args;
-    const binPath = join(rootDir, bin);
+    const [binId = ""] = args;
+    const binPath = join(rootDir, binId);
 
-    if (!(bin && existsSync(binPath))) {
+    if (!(binId && existsSync(binPath))) {
       return notFound(res);
     }
 
@@ -120,22 +120,22 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
   onCreateBin({ req, res }) {
     tryCatch(res, () => {
-      const id = randomUUID();
-      ensureDir(join(rootDir, id));
+      const binId = randomUUID();
+      ensureDir(join(rootDir, binId));
       res.setHeader(
         "location",
-        String(new URL("/bin/" + id, getProxyHost(req)))
+        String(new URL("/bin/" + binId, getProxyHost(req)))
       );
-      res.end(id);
+      res.end(binId);
     });
   },
 
   async onDeleteFile({ res, args }) {
-    const [bin = "", file = ""] = args;
-    const filePath = join(rootDir, bin, file);
-    const metaPath = join(rootDir, bin, file + ".meta");
+    const [binId = "", file = ""] = args;
+    const filePath = join(rootDir, binId, file);
+    const metaPath = join(rootDir, binId, file + ".meta");
 
-    if (!(bin && file && existsSync(filePath))) {
+    if (!(binId && file && existsSync(filePath))) {
       return notFound(res);
     }
 
@@ -147,10 +147,10 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   },
 
   async onDeleteBin({ res, args }) {
-    const [bin = ""] = args;
-    const binPath = join(rootDir, bin);
+    const [binId = ""] = args;
+    const binPath = join(rootDir, binId);
 
-    if (!(bin && existsSync(binPath))) {
+    if (!(binId && existsSync(binPath))) {
       return notFound(res);
     }
 

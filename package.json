@@ -5,6 +5,7 @@
   "types": "./dist/index.d.ts",
   "type": "module",
   "scripts": {
+    "ci": "npm i && npm run build",
     "build": "tsc",
     "test": "echo true",
     "tdd": "jest --watchAll"
