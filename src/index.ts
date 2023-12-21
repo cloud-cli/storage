@@ -32,19 +32,21 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
       return notFound(res);
     }
 
-    if (existsSync(metaPath)) {
-      const metaContent = await readFile(metaPath, "utf-8");
-      const meta = JSON.parse(metaContent);
+    tryCatch(res, async () => {
+      if (existsSync(metaPath)) {
+        const metaContent = await readFile(metaPath, "utf-8");
+        const meta = JSON.parse(metaContent);
 
-      Object.entries(meta).forEach(([key, value]) =>
-        res.setHeader(key, String(value))
-      );
-    }
+        Object.entries(meta).forEach(([key, value]) =>
+          res.setHeader(key, String(value))
+        );
+      }
 
-    const stats = await stat(filePath);
-    res.setHeader("content-length", stats.size);
-    res.setHeader("last-modified", new Date(stats.mtime).toString());
-    createReadStream(join(rootDir, binId, fileId)).pipe(res);
+      const stats = await stat(filePath);
+      res.setHeader("content-length", stats.size);
+      res.setHeader("last-modified", new Date(stats.mtime).toString());
+      createReadStream(join(rootDir, binId, fileId)).pipe(res);
+    });
   },
 
   async onCreateFile({ args, req, res }) {
@@ -55,7 +57,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
       return notFound(res);
     }
 
-    try {
+    tryCatch(res, async () => {
       const payload = await readStream(req);
       const fileId = randomUUID();
       const meta = payload.toString("utf-8");
@@ -74,10 +76,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
         String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)))
       );
       res.end(fileId);
-    } catch (error) {
-      console.log(error);
-      res.writeHead(500).end();
-    }
+    });
   },
 
   onWriteFile({ args, req, res }) {
@@ -181,22 +180,13 @@ async function tryCatch(res, fn) {
   try {
     await fn();
   } catch (error) {
-    onError(res, error);
+    console.log(error);
+    res.writeHead(500).end();
   }
 }
 
-function onError(res, error) {
-  console.log(error);
-  res.writeHead(500).end();
-}
-
 function getProxyHost(req) {
-  return new URL(
-    req.headers["x-forwarded-proto"] +
-      "//" +
-      req.headers["x-forwarded-for"] +
-      "/api"
-  ).toString();
+  return new URL(`https://${req.headers["x-forwarded-for"] || 'localhost'}`).toString();
 }
 
 export type Options = { port?: Number; rootDir?: string };
