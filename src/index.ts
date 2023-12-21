@@ -161,13 +161,13 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
   async onApiSpec({ req, res }) {
     const host = getProxyHost(req);
-    const spec = await readFile("../api.yaml", "utf-8");
+    const spec = await readFile("./api.yaml", "utf-8");
     res.end(spec.replace("__API_HOST__", host));
   },
 
   async onEsModule({ req, res }) {
     const host = getProxyHost(req);
-    const file = await readFile("../filebin.mjs", "utf-8");
+    const file = await readFile("./filebin.mjs", "utf-8");
     res.end(file.replace("__API_HOST__", host));
   },
 });
