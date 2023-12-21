@@ -20,17 +20,15 @@ type RouteHandler = (p: {
   args: string[];
 }) => void;
 
-const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) => ({
-  onIndex({ res }) {
-    res.end("OK");
-  },
-
+const createRoutes: (dir: string) => Record<string, RouteHandler> = (
+  rootDir
+) => ({
   async onReadFile({ args, res }) {
-    const [bin = "", hash = ""] = args;
-    const filePath = join(rootDir, bin, hash);
+    const [bin = "", fileId = ""] = args;
+    const filePath = join(rootDir, bin, fileId);
     const metaPath = filePath + ".meta";
 
-    if (!(bin && hash && existsSync(filePath))) {
+    if (!(bin && fileId && existsSync(filePath))) {
       return notFound(res);
     }
 
@@ -46,8 +44,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) =>
     const stats = await stat(filePath);
     res.setHeader("content-length", stats.size);
     res.setHeader("last-modified", new Date(stats.mtime).toString());
-
-    createReadStream(join(rootDir, bin, hash)).pipe(res);
+    createReadStream(join(rootDir, bin, fileId)).pipe(res);
   },
 
   async onCreateFile({ args, req, res }) {
@@ -72,7 +69,11 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) =>
 
       await writeFile(join(binPath, hash), "");
 
-      res.end("OK");
+      res.setHeader(
+        "location",
+        String(new URL("/f/" + hash, getProxyHost(req)))
+      );
+      res.end(hash);
     } catch (error) {
       console.log(error);
       res.writeHead(500).end();
@@ -80,14 +81,26 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) =>
   },
 
   onWriteFile({ args, req, res }) {
-    const [bin = "", hash = ""] = args;
-    const filePath = join(rootDir, bin, hash);
+    const [binId = "", fileId = ""] = args;
+    const filePath = join(rootDir, binId, fileId);
 
-    if (!(bin && hash && existsSync(filePath))) {
+    if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
     }
 
-    req.pipe(createWriteStream(filePath)).on("close", () => res.end("OK"));
+    const writer = createWriteStream(filePath);
+
+    writer.on("close", () => {
+      res.end(
+        JSON.stringify({
+          id: fileId,
+          bin: binId,
+          url: String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))),
+        })
+      );
+    });
+
+    req.pipe(writer);
   },
 
   async onReadBin({ args, res }) {
@@ -105,10 +118,14 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) =>
     });
   },
 
-  onCreateBin({ res }) {
+  onCreateBin({ req, res }) {
     tryCatch(res, () => {
       const id = randomUUID();
       ensureDir(join(rootDir, id));
+      res.setHeader(
+        "location",
+        String(new URL("/bin/" + id, getProxyHost(req)))
+      );
       res.end(id);
     });
   },
@@ -144,15 +161,15 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) =>
   },
 
   async onApiSpec({ req, res }) {
-    const host = new URL(
-      req.headers["x-forwarded-proto"] +
-        "//" +
-        req.headers["x-forwarded-for"] +
-        "/api"
-    );
-
+    const host = getProxyHost(req);
     const spec = await readFile("../api.yaml", "utf-8");
-    res.end(spec.replace("__API_HOST__", String(host)));
+    res.end(spec.replace("__API_HOST__", host));
+  },
+
+  async onEsModule({ req, res }) {
+    const host = getProxyHost(req);
+    const file = await readFile("../filebin.mjs", "utf-8");
+    res.end(file.replace("__API_HOST__", host));
   },
 });
 
@@ -173,7 +190,16 @@ function onError(res, error) {
   res.writeHead(500).end();
 }
 
-export type Options = { port?: Number, rootDir?: string };
+function getProxyHost(req) {
+  return new URL(
+    req.headers["x-forwarded-proto"] +
+      "//" +
+      req.headers["x-forwarded-for"] +
+      "/api"
+  ).toString();
+}
+
+export type Options = { port?: Number; rootDir?: string };
 
 export function start(options: Options = {}) {
   const rootDir = process.env.ROOT_DIR || options.rootDir;
@@ -192,10 +218,10 @@ export function start(options: Options = {}) {
 
     switch (route) {
       case "GET":
-        return routes.onIndex(p);
-
-      case "GET api":
         return routes.onApiSpec(p);
+
+      case "GET index.mjs":
+        return routes.onEsModule(p);
 
       case "GET f":
         return routes.onReadFile(p);

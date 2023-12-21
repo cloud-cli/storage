@@ -1,9 +1,18 @@
 name: CICD
+
 on:
   push:
     branches:
       - main
+
 jobs:
+  publish:
+    uses: cloud-cli/workflows/.github/workflows/docker-ghcr-build.yml@main
+    with:
+      name: cloud-cli/storage
+      baseImage: cloud-cli/node:latest
+      type: node
+
   release:
     uses: homebots/workflows/.github/workflows/node-build-release.yml@master
     with:

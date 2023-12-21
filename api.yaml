@@ -31,7 +31,7 @@ paths:
       tags:
         - bin
       summary: List all files in a bin
-      operationId: listBin
+      operationId: listFiles
       parameters:
         - name: binId
           in: path
@@ -46,8 +46,8 @@ paths:
     delete:
       tags:
         - bin
-      summary: Deletes a bin and all files
-      operationId: deleteBin
+      summary: Removes a bin and all files
+      operationId: removeBin
       parameters:
         - name: binId
           in: path
@@ -59,24 +59,35 @@ paths:
           description: OK
         "500":
           description: Unable to remove this bin
-  /f:
+  /f/{binId}:
     post:
       tags:
         - file
       summary: Create file
       operationId: createFile
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "201":
           description: File created, ready to upload
         "500":
           description: Failed to create the file
-  /f/{fileId}:
+  /f/{binId}/{fileId}:
     get:
       tags:
         - file
       summary: Read file
       operationId: readFile
       parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
         - name: fileId
           in: path
           required: true
@@ -92,7 +103,7 @@ paths:
         - file
       summary: Update a file
       description: ""
-      operationId: updatePetWithForm
+      operationId: writeFile
       parameters:
         - name: fileId
           in: path
@@ -105,8 +116,8 @@ paths:
     delete:
       tags:
         - file
-      summary: Delete a file
-      operationId: deleteFile
+      summary: Remove a file
+      operationId: removeFile
       parameters:
         - name: fileId
           in: path
