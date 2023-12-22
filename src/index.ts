@@ -9,7 +9,7 @@ import {
   mkdir,
   readdir,
   stat,
-  rmdir,
+  rm,
   unlink,
 } from "node:fs/promises";
 
@@ -159,7 +159,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     }
 
     tryCatch(res, async () => {
-      await rmdir(binPath, { recursive: true });
+      await rm(binPath, { recursive: true });
       res.end("OK");
     });
   },
