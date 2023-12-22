@@ -141,7 +141,11 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     tryCatch(res, async () => {
       await unlink(filePath);
-      await unlink(metaPath);
+
+      if (existsSync(metaPath)) {
+        await unlink(metaPath);
+      }
+
       res.end("OK");
     });
   },
