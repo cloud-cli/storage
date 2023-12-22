@@ -1,4 +1,4 @@
-const API_URL = "https://__API_HOST__";
+const API_URL = "__API_HOST__";
 
 const u = (s) => new URL(s, API_URL);
 const g = { method: "GET", mode: "cors" };
