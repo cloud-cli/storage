@@ -30,14 +30,19 @@ start({ rootDir: process.cwd() + '/data', port: 1234 });
 Consuming it as an ES module: if the server is running at `https://bin.example.com`, import it as a module in a project:
 
 ```ts
-import { createBin, createFile, writeFile } from 'https://bin.example.com/index.mjs';
+import { createBin, createFile, writeFile, readFile } from 'https://bin.example.com/index.mjs';
 
 async function save(content) {
   const { binId } = await createBin();
   const { fileId } = await createFile(binId);
-  await writeFile(binId, fileId, content);
-  const content = await readFile(binId, fileId);
+
+  return await writeFile(binId, fileId, content);
 }
+
+const { binId, fileID, url } = await save('hello');
+const content = await readFile(binId, fileId);
+// or directly
+const hello = await (await fetch(url)).text();
 ```
 
 ## Environment variables
