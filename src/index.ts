@@ -49,7 +49,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     });
   },
 
-  async onReadMetadata({ args, res }) {
+  async onReadMetadata({ args, req, res }) {
     const [binId = "", fileId = ""] = args;
     const filePath = join(rootDir, binId, fileId);
     const metaPath = filePath + ".meta";
@@ -61,15 +61,18 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     tryCatch(res, async () => {
       const meta = await readMeta(metaPath);
       const stats = await stat(filePath);
+      const baseUrl = getProxyHost(req);
 
       res.setHeader("content-type", "application/json");
       res.end(
         JSON.stringify({
           ...meta,
+          id: fileId,
+          bin: binId,
           size: stats.size,
           name: meta.name || fileId,
-          created: new Date(stats.ctime).toISOString(),
           lastModified: new Date(stats.mtime).toISOString(),
+          url: String(new URL(`/f/${binId}/${fileId}`, baseUrl)),
         })
       );
     });
@@ -225,6 +228,10 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     res.setHeader("content-type", "text/javascript");
     res.end(file.replace("__API_HOST__", host));
   },
+
+  async onGetUI({ res }) {
+    createReadStream("./index.html").pipe(res);
+  },
 });
 
 function notFound(res) {
@@ -311,6 +318,9 @@ export function start(options: Options = {}) {
 
       case "DELETE bin":
         return routes.onDeleteBin(p);
+
+      case "GET ui":
+        return routes.onGetUI(p);
 
       default:
         notFound(res);
