@@ -230,6 +230,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   },
 
   async onGetUI({ res }) {
+    res.setHeader("content-type", "text/html");
     createReadStream("./index.html").pipe(res);
   },
 });
