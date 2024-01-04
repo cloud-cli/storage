@@ -54,7 +54,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     const filePath = join(rootDir, binId, fileId);
     const metaPath = filePath + ".meta";
 
-    if (!(binId && fileId && existsSync(metaPath))) {
+    if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
     }
 

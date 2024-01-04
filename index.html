@@ -5,14 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FileBin</title>
     <meta name="theme-color" content="#e91e63" />
-    <link
-      href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/icon?family=Material+Icons"
-      rel="stylesheet"
-    />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
       import { listFiles, readMetadata } from "/index.mjs";
 
@@ -33,27 +26,27 @@
           return `${(bytes / oneMB).toFixed(2)}MB`;
         }
 
-        return "WTF";
+        return "WTF?";
       };
 
       const createRow = (file) => `<tr
         class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
       >
         <td
-          class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0 font-medium"
+          class="p-4 align-middle [&:has([role=checkbox])]:pr-0 font-medium"
         >
           ${file.name}
         </td>
-        <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
           ${file.lastModified}
         </td>
-        <td class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0">
+        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
           ${fileSize(file.size)}
         </td>
         <td
-          class="p-4 align-middle [&amp;:has([role=checkbox])]:pr-0 hidden md:table-cell"
+          class="p-4 align-middle [&:has([role=checkbox])]:pr-0 hidden md:table-cell"
         >
-          <a class="underline text-blue-500" href="${file.url}">
+          <a class="underline text-blue-500" target="_blank" href="${file.url}">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -114,7 +107,7 @@
   </head>
   <body>
     <div class="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div class="hidden border-r bg-gray-100/40 lg:block dark:bg-gray-800/40">
+      <div class="hidden border-r bg-gray-100/40 md:block dark:bg-gray-800/40">
         <div class="flex h-full max-h-screen flex-col gap-2">
           <div class="flex h-[60px] items-center border-b px-6">
             <a
@@ -192,36 +185,33 @@
           <div class="border shadow-sm rounded-lg">
             <div class="relative w-full overflow-auto">
               <table class="w-full caption-bottom text-sm">
-                <thead class="[&amp;_tr]:border-b">
+                <thead class="[&_tr]:border-b">
                   <tr
                     class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                   >
                     <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 w-[80px]"
+                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-[80px]"
                     >
                       File Name
                     </th>
                     <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 max-w-[150px]"
+                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 max-w-[150px]"
                     >
                       Creation Date
                     </th>
                     <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0 hidden md:table-cell"
+                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 hidden md:table-cell"
                     >
                       Size
                     </th>
                     <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&amp;:has([role=checkbox])]:pr-0"
+                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                     >
-                      Download
+                      &nbsp;
                     </th>
                   </tr>
                 </thead>
-                <tbody
-                  class="[&amp;_tr:last-child]:border-0"
-                  id="filelist"
-                ></tbody>
+                <tbody class="[&_tr:last-child]:border-0" id="filelist"></tbody>
               </table>
             </div>
           </div>
