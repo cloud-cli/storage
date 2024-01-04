@@ -291,6 +291,9 @@ export function start(options: Options = {}) {
       case "GET meta":
         return routes.onReadMetadata(p);
 
+      case "PUT meta":
+        return routes.onWriteMetadata(p);
+
       case "POST f":
         return routes.onCreateFile(p);
 

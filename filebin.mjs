@@ -59,3 +59,19 @@ export async function writeFile(bin, file, content) {
     ? await req.json()
     : Promise.reject(new Error("Failed to update file"));
 }
+
+export async function writeMetadata(bin, file, content) {
+  const req = await fetch(u(`/meta/${bin}/${file}`), {
+    method: "PUT",
+    mode: "cors",
+    body: JSON.stringify(content),
+  });
+  return req.ok || Promise.reject(new Error("Failed to update file metadata"));
+}
+
+export async function readMetadata(bin, file) {
+  const req = await fetch(u(`/meta/${bin}/${file}`), g);
+  return req.ok
+    ? await req.json()
+    : Promise.reject(new Error("Failed to fetch file metadata"));
+}
