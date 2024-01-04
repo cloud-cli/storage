@@ -21,15 +21,15 @@
       const oneGB = oneMB * 1024;
 
       const fileSize = (bytes) => {
-        if (size < oneKB) {
+        if (bytes < oneKB) {
           return `${bytes} b`;
         }
 
-        if (size < oneMB) {
+        if (bytes < oneMB) {
           return `${(bytes / oneKB).toFixed(2)}KB`;
         }
 
-        if (size < oneGB) {
+        if (bytes < oneGB) {
           return `${(bytes / oneMB).toFixed(2)}MB`;
         }
 
@@ -83,8 +83,17 @@
         rows.innerHTML = "";
 
         fileList.forEach(async (fileId) => {
-          const meta = await readMetadata(binId, fileId);
-          rows.innerHTML += createRow(meta);
+          try {
+            const meta = await readMetadata(binId, fileId);
+            rows.innerHTML += createRow(meta);
+          } catch (e) {
+            rows.innerHTML += createRow({
+              size: 0,
+              lastModified: "",
+              name: fileId,
+              url: "/f/" + binId + "/" + fileId,
+            });
+          }
         });
       }
 
