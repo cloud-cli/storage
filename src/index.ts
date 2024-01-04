@@ -49,6 +49,55 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     });
   },
 
+  async onReadMetadata({ args, res }) {
+    const [binId = "", fileId = ""] = args;
+    const filePath = join(rootDir, binId, fileId);
+    const metaPath = filePath + ".meta";
+
+    if (!(binId && fileId && existsSync(metaPath))) {
+      return notFound(res);
+    }
+
+    tryCatch(res, async () => {
+      const meta = await readMeta(metaPath);
+      const stats = await stat(filePath);
+
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          ...meta,
+          size: stats.size,
+          name: meta.name || fileId,
+          created: new Date(stats.ctime).toISOString(),
+          lastModified: new Date(stats.mtime).toISOString(),
+        })
+      );
+    });
+  },
+
+  async onWriteMetadata({ args, req, res }) {
+    const [binId = "", fileId = ""] = args;
+    const metaPath = join(rootDir, binId, fileId + ".meta");
+
+    if (!(binId && fileId && existsSync(metaPath))) {
+      return notFound(res);
+    }
+
+    tryCatch(res, async () => {
+      const payload = await readStream(req);
+      const meta = payload.toString("utf-8").trim();
+
+      if (meta) {
+        await writeFile(metaPath, JSON.stringify(JSON.parse(meta)));
+        const url = String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)));
+        res.writeHead(202).end(JSON.stringify({ url }));
+        return;
+      }
+
+      res.writeHead(400).end();
+    });
+  },
+
   async onCreateFile({ args, req, res }) {
     const [binId = ""] = args;
     const binPath = join(rootDir, binId);
@@ -239,6 +288,9 @@ export function start(options: Options = {}) {
       case "GET f":
         return routes.onReadFile(p);
 
+      case "GET meta":
+        return routes.onReadMetadata(p);
+
       case "POST f":
         return routes.onCreateFile(p);
 
@@ -275,6 +327,14 @@ function readStream(stream): Promise<Buffer> {
 function ensureDir(path) {
   if (existsSync(path)) return;
   return mkdir(path, { recursive: true });
+}
+
+async function readMeta(metaPath: string) {
+  if (existsSync(metaPath)) {
+    return JSON.parse(await readFile(metaPath, "utf8"));
+  }
+
+  return {};
 }
 
 export default start;

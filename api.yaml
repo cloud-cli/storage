@@ -76,6 +76,49 @@ paths:
           description: File created, ready to upload
         "500":
           description: Failed to create the file
+  /meta/{binId}/{fileId}:
+    get:
+      tags:
+        - file
+      summary: Read file metadata
+      operationId: readMetadata
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File metadata
+        "404":
+          description: File not found
+    put:
+      tags:
+        - file
+      summary: Update file metadata
+      operationId: writeMetadata
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+    responses:
+      "202":
+        description: File metadata updated
+      "404":
+        description: File not found
   /f/{binId}/{fileId}:
     get:
       tags:
