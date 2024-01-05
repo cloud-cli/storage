@@ -21,6 +21,7 @@
       const oneKB = 1024;
       const oneMB = oneKB * 1024;
       const oneGB = oneMB * 1024;
+      const binId = new URL(location.href).searchParams.get("bin");
 
       const fileSize = (bytes) => {
         if (bytes < oneKB) {
@@ -126,14 +127,12 @@
        * @param {File[]} files
        */
       async function uploadFiles(files) {
-        const binId = new URL(location.href).searchParams.get("bin");
-
         for (const file of files) {
           const { fileId } = await createFile(binId);
           await writeMetadata(binId, fileId, {
             name: file.name,
-            'content-type': file.type,
-            'last-modified': file.lastModified,
+            "content-type": file.type,
+            "last-modified": file.lastModified,
           });
           await writeFile(binId, fileId, file);
           addFileToList(binId, fileId);
@@ -146,8 +145,6 @@
       }
 
       async function updateList() {
-        const binId = new URL(location.href).searchParams.get("bin");
-
         if (!binId) {
           return;
         }
@@ -189,8 +186,14 @@
           filedialog.showModal()
         );
         uploadclosebutton.addEventListener("click", () => filedialog.close());
-        addbin.addEventListener("click", onAddBin);
-        binid.innerText = new URL(location.href).searchParams.get("bin");
+
+        if (!binId) {
+          newbin.classList.remove("hidden");
+          document.querySelector("main").classList.add("hidden");
+          addbin.addEventListener("click", onAddBin);
+        } else {
+          binid.innerText = binId;
+        }
 
         updateList();
       });
@@ -216,31 +219,9 @@
               d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
             ></path>
           </svg>
-          <span class="font-bold">File Bin</span>
+          <span class="font-bold hidden md:inline">File Bin</span>
           <span class="ml-4 text-xs rounded" id="binid"></span>
         </a>
-
-        <button
-          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground ml-auto h-8 w-8"
-          id="addbin"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="h-4 w-4"
-          >
-            <path d="M5 12h14"></path>
-            <path d="M12 5v14"></path>
-          </svg>
-          <span class="sr-only"> Add new file bin </span>
-        </button>
       </div>
     </div>
 
@@ -289,6 +270,29 @@
         </table>
       </div>
     </main>
+    <aside class="flex flex-1 items-center justify-center hidden" id="newbin">
+      <button
+        class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground ml-auto h-8 w-8"
+        id="addbin"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-4 w-4"
+        >
+          <path d="M5 12h14"></path>
+          <path d="M12 5v14"></path>
+        </svg>
+        <span> Create file bin </span>
+      </button>
+    </aside>
     <dialog id="filedialog">
       <form
         id="uploadform"
