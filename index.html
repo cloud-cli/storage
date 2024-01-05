@@ -39,6 +39,8 @@
         return 'WTF?';
       };
 
+      const fileDate = (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
+
       function createRow(file) {
         return `<tr
   class="border-b transition-colors hover:bg-gray-100"
@@ -50,7 +52,7 @@
     ${file.name}
   </td>
   <td class="px-4 py-2 align-middle hidden md:table-cell">
-    ${file.lastModified}
+    ${fileDate(file.lastModified)}
   </td>
   <td class="px-4 py-2 align-middle hidden md:table-cell">
     ${fileSize(file.size)}
