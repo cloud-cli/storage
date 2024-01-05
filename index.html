@@ -7,7 +7,15 @@
     <meta name="theme-color" content="#e91e63" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
-      import { listFiles, readMetadata } from "/index.mjs";
+      import {
+        listFiles,
+        readMetadata,
+        writeMetadata,
+        writeFile,
+        createFile,
+        createBin,
+        removeBin,
+      } from "https://bin.homebots.io/index.mjs";
 
       const oneKB = 1024;
       const oneMB = oneKB * 1024;
@@ -29,44 +37,69 @@
         return "WTF?";
       };
 
-      const createRow = (file) => `<tr
-        class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+      function createRow(file) {
+        return `<tr
+  class="border-b transition-colors hover:bg-gray-100"
+  >
+  <td
+    class="p-4 align-middle font-medium"
+  >
+    ${file.name}
+  </td>
+  <td class="p-4 align-middle hidden md:table-cell">
+    ${file.lastModified}
+  </td>
+  <td class="p-4 align-middle hidden md:table-cell">
+    ${fileSize(file.size)}
+  </td>
+  <td
+    class="p-4 align-middle"
+  >
+    <a class="underline text-blue-500" target="_blank" href="${file.url}">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-4 w-4"
       >
-        <td
-          class="p-4 align-middle [&:has([role=checkbox])]:pr-0 font-medium"
-        >
-          ${file.name}
-        </td>
-        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
-          ${file.lastModified}
-        </td>
-        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
-          ${fileSize(file.size)}
-        </td>
-        <td
-          class="p-4 align-middle [&:has([role=checkbox])]:pr-0 hidden md:table-cell"
-        >
-          <a class="underline text-blue-500" target="_blank" href="${file.url}">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="h-4 w-4"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" x2="12" y1="15" y2="3"></line>
-            </svg>
-            <span class="sr-only">Download</span>
-          </a>
-        </td>
-      </tr>`;
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" x2="12" y1="15" y2="3"></line><
+        /svg>
+      <span class="sr-only">Download</span>
+    </a>
+  </td>
+  </tr>`;
+      }
+
+      /**
+       * @param {File[]} files
+       */
+      async function uploadFiles(files) {
+        const binId = new URL(location.href).searchParams.get("bin");
+
+        for (const file of files) {
+          const { fileId } = await createFile(binId);
+          await writeMetadata(binId, fileId, {
+            name: file.name,
+            type: file.type,
+            created: file.lastModified,
+          });
+          addFileToList(binId, fileId);
+          await writeFile(binId, fileId, file);
+        }
+      }
+
+      async function addFileToList(binId, fileId) {
+        const meta = await readMetadata(binId, fileId);
+        filelist.innerHTML += createRow(meta);
+      }
 
       async function updateList() {
         const binId = new URL(location.href).searchParams.get("bin");
@@ -75,150 +108,210 @@
 
         rows.innerHTML = "";
 
-        fileList.forEach(async (fileId) => {
-          try {
-            const meta = await readMetadata(binId, fileId);
-            rows.innerHTML += createRow(meta);
-          } catch (e) {
-            rows.innerHTML += createRow({
-              size: 0,
-              lastModified: "",
-              name: fileId,
-              url: "/f/" + binId + "/" + fileId,
-            });
-          }
-        });
+        fileList.forEach((fileId) => addFileToList(binId, fileId));
       }
 
       window.addEventListener("DOMContentLoaded", () => {
-        const onUpload = (e) => console.log(e);
+        function onUpload(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          uploadFiles([...fileupload.files]);
+        }
 
-        document
-          .querySelector("#heading")
-          .addEventListener("click", updateList);
-        document
-          .querySelector("#file-upload")
-          .addEventListener("input", onUpload);
-        document
-          .querySelector("#file-upload")
-          .addEventListener("change", onUpload);
+        async function onAddBin() {
+          const { binId } = await createBin();
+          const url = new URL(location.href);
+          url.searchParams.set("bin", binId);
+          location.href = String(url);
+        }
 
+        heading.addEventListener("click", updateList);
+        uploadform.addEventListener("submit", onUpload);
+        fileuploadbutton.addEventListener("click", () =>
+          filedialog.showModal()
+        );
+        uploadclosebutton.addEventListener("click", () => filedialog.close());
+        addbin.addEventListener("click", onAddBin);
+        binid.innerText = new URL(location.href).searchParams.get("bin");
         updateList();
       });
     </script>
   </head>
-  <body>
-    <div class="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div class="hidden border-r bg-gray-100/40 md:block dark:bg-gray-800/40">
-        <div class="flex h-full max-h-screen flex-col gap-2">
-          <div class="flex h-[60px] items-center border-b px-6">
-            <a
-              class="flex items-center gap-2 font-semibold"
-              href="#"
-              id="heading"
-              ><svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="h-6 w-6"
-              >
-                <path
-                  d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
-                ></path>
-              </svg>
-              <span>File Bin</span></a
-            >
-          </div>
-          <div class="flex-1 overflow-auto py-2">
-            <form class="grid gap-4 p-4">
-              <div class="grid w-full gap-1.5">
-                <label
-                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  for="file-upload"
-                  >Upload File</label
-                >
-                <input
-                  class="flex h-10 w-full bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 border border-gray-200 dark:border-gray-800 rounded-md p-2"
-                  id="file-upload"
-                  type="file"
-                />
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  Drag and drop your files here or click to select files.
-                </p>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-      <div class="flex flex-col">
-        <header
-          class="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-gray-100/40 px-6 dark:bg-gray-800/40"
-        >
-          <a class="lg:hidden" href="#"
-            ><svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="h-6 w-6"
-            >
-              <path
-                d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
-              ></path>
-            </svg>
-            <span class="sr-only">Home</span></a
+  <body class="h-screen w-full flex flex-col">
+    <div class="border-r bg-gray-100">
+      <div class="flex items-center border-b px-6 w-full py-4">
+        <a class="flex items-center gap-2 font-semibold" href="#" id="heading"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-6 w-6"
           >
-        </header>
-        <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-          <div class="flex items-center">
-            <h1 class="font-semibold text-lg md:text-2xl">Your Files</h1>
-          </div>
-          <div class="border shadow-sm rounded-lg">
-            <div class="relative w-full overflow-auto">
-              <table class="w-full caption-bottom text-sm">
-                <thead class="[&_tr]:border-b">
-                  <tr
-                    class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                  >
-                    <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-[80px]"
-                    >
-                      File Name
-                    </th>
-                    <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 max-w-[150px]"
-                    >
-                      Creation Date
-                    </th>
-                    <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 hidden md:table-cell"
-                    >
-                      Size
-                    </th>
-                    <th
-                      class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
-                    >
-                      &nbsp;
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="[&_tr:last-child]:border-0" id="filelist"></tbody>
-              </table>
-            </div>
-          </div>
-        </main>
+            <path
+              d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
+            ></path>
+          </svg>
+          <span class="font-bold">File Bin</span>
+          <span class="ml-4 text-xs rounded" id="binid"></span>
+        </a>
+
+        <button
+          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground ml-auto h-8 w-8"
+          id="addbin"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+          >
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+          </svg>
+          <span class="sr-only"> Add new file bin </span>
+        </button>
       </div>
     </div>
+
+    <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+      <div class="flex items-center justify-between">
+        <h1 class="font-semibold text-lg md:text-2xl">Your Files</h1>
+        <button
+          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-blue-500 text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+          type="button"
+          id="fileuploadbutton"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls="radix-:upload:"
+          data-state="closed"
+        >
+          Upload File
+        </button>
+      </div>
+      <div class="border shadow-sm rounded-lg">
+        <table class="w-full caption-bottom text-sm">
+          <thead class="[&_tr]:border-b">
+            <tr class="border-b transition-colors">
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground"
+              >
+                File Name
+              </th>
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
+              >
+                Last modified
+              </th>
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
+              >
+                Size
+              </th>
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground"
+              >
+                &nbsp;
+              </th>
+            </tr>
+          </thead>
+          <tbody class="[&_tr:last-child]:border-0" id="filelist"></tbody>
+        </table>
+      </div>
+    </main>
+    <dialog id="filedialog">
+      <form
+        id="uploadform"
+        aria-describedby="radix-:uploadH2:"
+        aria-labelledby="radix-:uploadH1:"
+        data-state="open"
+        class="fixed bg-white left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg sm:max-w-[425px]"
+        data-id="13"
+        tabindex="-1"
+        style="pointer-events: auto;"
+      >
+        <div
+          class="flex flex-col space-y-1.5 text-center sm:text-left"
+          data-id="14"
+        >
+          <h2
+            id="radix-:uploadH1:"
+            class="text-lg font-semibold leading-none tracking-tight mb-4"
+            data-id="15"
+          >
+            Upload File
+          </h2>
+          <p
+            id="radix-:uploadH2:"
+            class="text-sm text-muted-foreground"
+            data-id="16"
+          >
+            Drag and drop your files here or click to select files.
+          </p>
+        </div>
+        <div class="grid gap-4 py-4" data-id="17">
+          <div class="grid w-full gap-1.5" data-id="18">
+            <label
+              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
+              for="fileupload"
+              data-id="19"
+            >
+              Upload File
+            </label>
+            <input
+              class="flex h-10 w-full bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 border border-gray-200 rounded-md p-2"
+              id="fileupload"
+              data-id="20"
+              type="file"
+            />
+          </div>
+        </div>
+        <div
+          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2"
+          data-id="22"
+        >
+          <button
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+            type="submit"
+            data-id="23"
+          >
+            Upload
+          </button>
+        </div>
+        <button
+          type="button"
+          id="uploadclosebutton"
+          class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+          >
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+          <span class="sr-only">Close</span>
+        </button>
+      </form>
+    </dialog>
   </body>
 </html>
