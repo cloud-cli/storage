@@ -8,13 +8,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
       import {
+        createBin,
+        removeBin,
         listFiles,
         readMetadata,
         writeMetadata,
-        writeFile,
         createFile,
-        createBin,
-        removeBin,
+        writeFile,
+        removeFile,
       } from "https://bin.homebots.io/index.mjs";
 
       const oneKB = 1024;
@@ -40,22 +41,26 @@
       function createRow(file) {
         return `<tr
   class="border-b transition-colors hover:bg-gray-100"
+  data-bin="${file.bin}" data-id="${file.id}"
   >
   <td
-    class="p-4 align-middle font-medium"
+    class="px-4 py-2 align-middle font-medium"
   >
     ${file.name}
   </td>
-  <td class="p-4 align-middle hidden md:table-cell">
+  <td class="px-4 py-2 align-middle hidden md:table-cell">
     ${file.lastModified}
   </td>
-  <td class="p-4 align-middle hidden md:table-cell">
+  <td class="px-4 py-2 align-middle hidden md:table-cell">
     ${fileSize(file.size)}
   </td>
   <td
-    class="p-4 align-middle"
+    class="px-4 align-middle text-right"
   >
-    <a class="underline text-blue-500" target="_blank" href="${file.url}">
+    <div class="flex"><a
+        class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+        target="_blank" href="${file.url}"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -70,13 +75,52 @@
       >
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" x2="12" y1="15" y2="3"></line><
-        /svg>
+        <line x1="12" x2="12" y1="15" y2="3"></line>
+        </svg>
       <span class="sr-only">Download</span>
     </a>
+    <button
+        class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+        onclick="onDeleteFile('${file.bin}', '${file.id}')">
+        <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-4 w-4"
+        >
+        <path d="M3 6h18"></path>
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+        </svg>
+    </button></div>
   </td>
   </tr>`;
       }
+
+      const editBtn = `<button class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
+        <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-4 w-4"
+        >
+        <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"></path>
+        </svg>
+    </button>`;
 
       /**
        * @param {File[]} files
@@ -91,8 +135,8 @@
             type: file.type,
             created: file.lastModified,
           });
-          addFileToList(binId, fileId);
           await writeFile(binId, fileId, file);
+          addFileToList(binId, fileId);
         }
       }
 
@@ -103,6 +147,11 @@
 
       async function updateList() {
         const binId = new URL(location.href).searchParams.get("bin");
+
+        if (!binId) {
+          return;
+        }
+
         const rows = document.querySelector("#filelist");
         const fileList = await listFiles(binId);
 
@@ -116,6 +165,7 @@
           e.preventDefault();
           e.stopPropagation();
           uploadFiles([...fileupload.files]);
+          filedialog.close();
         }
 
         async function onAddBin() {
@@ -125,6 +175,14 @@
           location.href = String(url);
         }
 
+        window.onDeleteFile = async function (bin, file) {
+          if (confirm("Are you sure?")) {
+            await removeFile(bin, file);
+            const row = document.querySelector(`[data-id="${file}"]`);
+            row && row.remove();
+          }
+        };
+
         heading.addEventListener("click", updateList);
         uploadform.addEventListener("submit", onUpload);
         fileuploadbutton.addEventListener("click", () =>
@@ -133,6 +191,7 @@
         uploadclosebutton.addEventListener("click", () => filedialog.close());
         addbin.addEventListener("click", onAddBin);
         binid.innerText = new URL(location.href).searchParams.get("bin");
+
         updateList();
       });
     </script>
@@ -189,7 +248,7 @@
       <div class="flex items-center justify-between">
         <h1 class="font-semibold text-lg md:text-2xl">Your Files</h1>
         <button
-          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-blue-500 text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-blue-500 text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-0"
           type="button"
           id="fileuploadbutton"
           aria-haspopup="dialog"
@@ -220,7 +279,7 @@
                 Size
               </th>
               <th
-                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground"
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground w-1"
               >
                 &nbsp;
               </th>
