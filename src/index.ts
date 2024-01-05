@@ -71,7 +71,8 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
           bin: binId,
           size: stats.size,
           name: meta.name || fileId,
-          lastModified: new Date(stats.mtime).toISOString(),
+          "content-length": stats.size,
+          "last-modified": new Date(stats.mtime).toISOString(),
           url: String(new URL(`/f/${binId}/${fileId}`, baseUrl)),
         })
       );

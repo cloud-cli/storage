@@ -132,8 +132,8 @@
           const { fileId } = await createFile(binId);
           await writeMetadata(binId, fileId, {
             name: file.name,
-            type: file.type,
-            created: file.lastModified,
+            'content-type': file.type,
+            'last-modified': file.lastModified,
           });
           await writeFile(binId, fileId, file);
           addFileToList(binId, fileId);
