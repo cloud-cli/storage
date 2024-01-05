@@ -1,32 +1,17 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream, existsSync } from "node:fs";
-import { join } from "node:path";
-import {
-  writeFile,
-  readFile,
-  mkdir,
-  readdir,
-  stat,
-  rm,
-  unlink,
-} from "node:fs/promises";
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
+import { createReadStream, createWriteStream, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeFile, readFile, mkdir, readdir, stat, rm, unlink } from 'node:fs/promises';
 
-type RouteHandler = (p: {
-  req: IncomingMessage;
-  res: ServerResponse;
-  url: URL;
-  args: string[];
-}) => void;
+type RouteHandler = (p: { req: IncomingMessage; res: ServerResponse; url: URL; args: string[] }) => void;
 
-const createRoutes: (dir: string) => Record<string, RouteHandler> = (
-  rootDir
-) => ({
+const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) => ({
   async onReadFile({ args, res }) {
-    const [binId = "", fileId = ""] = args;
+    const [binId = '', fileId = ''] = args;
     const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + ".meta";
+    const metaPath = filePath + '.meta';
 
     if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
@@ -37,20 +22,20 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
       const stats = await stat(filePath);
 
       Object.entries(meta).forEach(([key, value]) =>
-        res.setHeader(key == "type" ? "content-type" : key, String(value))
+        res.setHeader(key == 'type' ? 'content-type' : key, String(value)),
       );
 
-      res.setHeader("content-length", stats.size);
-      res.setHeader("last-modified", new Date(stats.mtime).toString());
+      res.setHeader('content-length', stats.size);
+      res.setHeader('last-modified', new Date(stats.mtime).toString());
 
       createReadStream(filePath).pipe(res);
     });
   },
 
   async onReadMetadata({ args, req, res }) {
-    const [binId = "", fileId = ""] = args;
+    const [binId = '', fileId = ''] = args;
     const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + ".meta";
+    const metaPath = filePath + '.meta';
 
     if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
@@ -61,7 +46,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
       const stats = await stat(filePath);
       const baseUrl = getProxyHost(req);
 
-      res.setHeader("content-type", "application/json");
+      res.setHeader('content-type', 'application/json');
       res.end(
         JSON.stringify({
           ...meta,
@@ -69,18 +54,18 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
           bin: binId,
           size: stats.size,
           name: meta.name || fileId,
-          "content-length": stats.size,
-          "last-modified": new Date(stats.mtime).toISOString(),
+          'content-length': stats.size,
+          'last-modified': new Date(stats.mtime).toISOString(),
           url: String(new URL(`/f/${binId}/${fileId}`, baseUrl)),
-        })
+        }),
       );
     });
   },
 
   async onWriteMetadata({ args, req, res }) {
-    const [binId = "", fileId = ""] = args;
+    const [binId = '', fileId = ''] = args;
     const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + ".meta";
+    const metaPath = filePath + '.meta';
 
     if (!(binId && fileId && existsSync(filePath))) {
       return notFound(res);
@@ -88,7 +73,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     tryCatch(res, async () => {
       const payload = await readStream(req);
-      const meta = payload.toString("utf-8").trim();
+      const meta = payload.toString('utf-8').trim();
 
       if (meta) {
         await writeFile(metaPath, JSON.stringify(JSON.parse(meta)));
@@ -102,7 +87,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   },
 
   async onCreateFile({ args, req, res }) {
-    const [binId = ""] = args;
+    const [binId = ''] = args;
     const binPath = join(rootDir, binId);
 
     if (!(binId && existsSync(binPath))) {
@@ -112,27 +97,21 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     tryCatch(res, async () => {
       const payload = await readStream(req);
       const fileId = randomUUID();
-      const meta = payload.toString("utf-8");
+      const meta = payload.toString('utf-8');
 
       if (meta) {
-        await writeFile(
-          join(binPath, fileId + ".meta"),
-          JSON.stringify(JSON.parse(meta))
-        );
+        await writeFile(join(binPath, fileId + '.meta'), JSON.stringify(JSON.parse(meta)));
       }
 
-      await writeFile(join(binPath, fileId), "");
+      await writeFile(join(binPath, fileId), '');
 
-      res.setHeader(
-        "location",
-        String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)))
-      );
+      res.setHeader('location', String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))));
       res.writeHead(201).end(`{"fileId": "${fileId}"}`);
     });
   },
 
   onWriteFile({ args, req, res }) {
-    const [binId = "", fileId = ""] = args;
+    const [binId = '', fileId = ''] = args;
     const filePath = join(rootDir, binId, fileId);
 
     if (!(binId && fileId && existsSync(filePath))) {
@@ -141,14 +120,14 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     const writer = createWriteStream(filePath);
 
-    writer.on("close", () => {
+    writer.on('close', () => {
       res.writeHead(202);
       res.end(
         JSON.stringify({
           id: fileId,
           bin: binId,
           url: String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))),
-        })
+        }),
       );
     });
 
@@ -156,7 +135,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
   },
 
   async onReadBin({ args, res }) {
-    const [binId = ""] = args;
+    const [binId = ''] = args;
     const binPath = join(rootDir, binId);
 
     if (!(binId && existsSync(binPath))) {
@@ -165,7 +144,7 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     tryCatch(res, async () => {
       const allFiles = await readdir(binPath);
-      const files = allFiles.filter((f) => !f.endsWith(".meta"));
+      const files = allFiles.filter((f) => !f.endsWith('.meta'));
       res.end(JSON.stringify(files));
     });
   },
@@ -174,18 +153,15 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     tryCatch(res, () => {
       const binId = randomUUID();
       ensureDir(join(rootDir, binId));
-      res.setHeader(
-        "location",
-        String(new URL("/bin/" + binId, getProxyHost(req)))
-      );
+      res.setHeader('location', String(new URL('/bin/' + binId, getProxyHost(req))));
       res.writeHead(201).end(`{"binId": "${binId}"}`);
     });
   },
 
   async onDeleteFile({ res, args }) {
-    const [binId = "", file = ""] = args;
+    const [binId = '', file = ''] = args;
     const filePath = join(rootDir, binId, file);
-    const metaPath = join(rootDir, binId, file + ".meta");
+    const metaPath = join(rootDir, binId, file + '.meta');
 
     if (!(binId && file && existsSync(filePath))) {
       return notFound(res);
@@ -198,12 +174,12 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
         await unlink(metaPath);
       }
 
-      res.end("OK");
+      res.end('OK');
     });
   },
 
   async onDeleteBin({ res, args }) {
-    const [binId = ""] = args;
+    const [binId = ''] = args;
     const binPath = join(rootDir, binId);
 
     if (!(binId && existsSync(binPath))) {
@@ -212,31 +188,31 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
 
     tryCatch(res, async () => {
       await rm(binPath, { recursive: true });
-      res.end("OK");
+      res.end('OK');
     });
   },
 
   async onApiSpec({ req, res }) {
     const host = getProxyHost(req);
-    const spec = await readFile("./api.yaml", "utf-8");
-    res.end(spec.replace("__API_HOST__", host));
+    const spec = await readFile('./api.yaml', 'utf-8');
+    res.end(spec.replace('__API_HOST__', host));
   },
 
   async onEsModule({ req, res }) {
     const host = getProxyHost(req);
-    const file = await readFile("./filebin.mjs", "utf-8");
-    res.setHeader("content-type", "text/javascript");
-    res.end(file.replace("__API_HOST__", host));
+    const file = await readFile('./filebin.mjs', 'utf-8');
+    res.setHeader('content-type', 'text/javascript');
+    res.end(file.replace('__API_HOST__', host));
   },
 
   async onGetUI({ res }) {
-    res.setHeader("content-type", "text/html");
-    createReadStream("./index.html").pipe(res);
+    res.setHeader('content-type', 'text/html');
+    createReadStream('./index.html').pipe(res);
   },
 });
 
 function notFound(res) {
-  res.writeHead(404).end("Not found");
+  res.writeHead(404).end('Not found');
 }
 
 async function tryCatch(res, fn) {
@@ -250,9 +226,7 @@ async function tryCatch(res, fn) {
 
 function getProxyHost(req: IncomingMessage) {
   return new URL(
-    `${req.headers["x-forwarded-proto"] || "http"}://${
-      req.headers["x-forwarded-for"] || "localhost"
-    }`
+    `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-for'] || 'localhost'}`,
   ).toString();
 }
 
@@ -262,7 +236,7 @@ export function start(options: Options = {}) {
   const rootDir = process.env.ROOT_DIR || options.rootDir;
 
   if (!rootDir) {
-    throw new Error("Cannot start without ROOT_DIR in environment.");
+    throw new Error('Cannot start without ROOT_DIR in environment.');
   }
 
   const routes = createRoutes(rootDir);
@@ -271,57 +245,51 @@ export function start(options: Options = {}) {
     const _end = res.end;
 
     res.end = (...args) => {
-      console.log(
-        "[%s] %d %s %s",
-        new Date().toISOString(),
-        res.statusCode,
-        req.method,
-        req.url
-      );
+      console.log('[%s] %d %s %s', new Date().toISOString(), res.statusCode, req.method, req.url);
       return _end.apply(res, args);
     };
 
-    const url = new URL(req.url, "http://localhost");
-    const [action, ...args] = url.pathname.slice(1).split("/");
+    const url = new URL(req.url, 'http://localhost');
+    const [action, ...args] = url.pathname.slice(1).split('/');
     const p = { req, res, args, url };
     const route = `${req.method} ${action}`.trim();
 
     switch (route) {
-      case "GET":
+      case 'GET':
+        return routes.onGetUI(p);
+
+      case 'GET api':
         return routes.onApiSpec(p);
 
-      case "GET index.mjs":
+      case 'GET index.mjs':
         return routes.onEsModule(p);
 
-      case "GET f":
+      case 'GET f':
         return routes.onReadFile(p);
 
-      case "GET meta":
+      case 'GET meta':
         return routes.onReadMetadata(p);
 
-      case "PUT meta":
+      case 'PUT meta':
         return routes.onWriteMetadata(p);
 
-      case "POST f":
+      case 'POST f':
         return routes.onCreateFile(p);
 
-      case "DELETE f":
+      case 'DELETE f':
         return routes.onDeleteFile(p);
 
-      case "PUT f":
+      case 'PUT f':
         return routes.onWriteFile(p);
 
-      case "GET bin":
+      case 'GET bin':
         return routes.onReadBin(p);
 
-      case "POST bin":
+      case 'POST bin':
         return routes.onCreateBin(p);
 
-      case "DELETE bin":
+      case 'DELETE bin':
         return routes.onDeleteBin(p);
-
-      case "GET ui":
-        return routes.onGetUI(p);
 
       default:
         notFound(res);
@@ -332,9 +300,9 @@ export function start(options: Options = {}) {
 function readStream(stream): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const parts = [];
-    stream.on("data", (c) => parts.push(c));
-    stream.on("end", () => resolve(Buffer.concat(parts) as Buffer));
-    stream.on("error", reject);
+    stream.on('data', (c) => parts.push(c));
+    stream.on('end', () => resolve(Buffer.concat(parts) as Buffer));
+    stream.on('error', reject);
   });
 }
 
@@ -345,7 +313,7 @@ function ensureDir(path) {
 
 async function readMeta(metaPath: string) {
   if (existsSync(metaPath)) {
-    return JSON.parse(await readFile(metaPath, "utf8"));
+    return JSON.parse(await readFile(metaPath, 'utf8'));
   }
 
   return {};

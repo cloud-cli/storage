@@ -8,7 +8,6 @@
     "ci": "npm i && npm run build",
     "build": "tsc",
     "test": "echo true",
-    "tdd": "jest --watchAll",
     "start": "node ./dist/server.js"
   },
   "prettier": "@cloud-cli/prettier-config",
@@ -21,6 +20,8 @@
   },
   "devDependencies": {
     "@cloud-cli/prettier-config": "^1.0.0",
-    "@cloud-cli/typescript-config": "^1.0.0"
+    "@cloud-cli/typescript-config": "^1.0.0",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
   }
 }

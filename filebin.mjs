@@ -1,19 +1,17 @@
-const API_URL = "__API_HOST__";
+const API_URL = '__API_HOST__';
 
 const u = (s) => new URL(s, API_URL);
-const g = { method: "GET", mode: "cors" };
-const p = { method: "POST", mode: "cors" };
-const d = { method: "DELETE", mode: "cors" };
+const g = { method: 'GET', mode: 'cors' };
+const p = { method: 'POST', mode: 'cors' };
+const d = { method: 'DELETE', mode: 'cors' };
 
 /**
  * @returns {Promise<{ binId: string }>}
  */
 export async function createBin() {
-  const req = await fetch(u("/bin"), p);
+  const req = await fetch(u('/bin'), p);
 
-  return req.ok
-    ? await req.json()
-    : Promise.reject(new Error("Failed to create bin"));
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to create bin'));
 }
 
 /**
@@ -23,7 +21,7 @@ export async function createBin() {
 export async function removeBin(bin) {
   const req = await fetch(u(`/bin/${bin}`), d);
 
-  return req.ok || Promise.reject(new Error("Failed to remove bin"));
+  return req.ok || Promise.reject(new Error('Failed to remove bin'));
 }
 
 /**
@@ -33,9 +31,7 @@ export async function removeBin(bin) {
 export async function listFiles(bin) {
   const req = await fetch(u(`/bin/${bin}`), g);
 
-  return req.ok
-    ? await req.json()
-    : Promise.reject(new Error("Failed to fetch files in this bin"));
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to fetch files in this bin'));
 }
 
 /**
@@ -45,9 +41,7 @@ export async function listFiles(bin) {
 export async function createFile(bin) {
   const req = await fetch(u(`/f/${bin}`), p);
 
-  return req.ok
-    ? await req.json()
-    : Promise.reject(new Error("Failed to create file"));
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to create file'));
 }
 
 /**
@@ -58,7 +52,7 @@ export async function createFile(bin) {
 export async function removeFile(bin, file) {
   const req = await fetch(u(`/f/${bin}/${file}`), d);
 
-  return req.ok || Promise.reject(new Error("Failed to remove file"));
+  return req.ok || Promise.reject(new Error('Failed to remove file'));
 }
 
 /**
@@ -69,9 +63,7 @@ export async function removeFile(bin, file) {
 export async function readFile(bin, file) {
   const req = await fetch(u(`/f/${bin}/${file}`), g);
 
-  return req.ok
-    ? req
-    : Promise.reject(new Error("Failed to retrieve this file"));
+  return req.ok ? req : Promise.reject(new Error('Failed to retrieve this file'));
 }
 
 /**
@@ -82,13 +74,11 @@ export async function readFile(bin, file) {
  */
 export async function writeFile(bin, file, content) {
   const req = await fetch(u(`/f/${bin}/${file}`), {
-    method: "PUT",
-    mode: "cors",
+    method: 'PUT',
+    mode: 'cors',
     body: content,
   });
-  return req.ok
-    ? await req.json()
-    : Promise.reject(new Error("Failed to update file"));
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to update file'));
 }
 
 /**
@@ -99,11 +89,11 @@ export async function writeFile(bin, file, content) {
  */
 export async function writeMetadata(bin, file, content) {
   const req = await fetch(u(`/meta/${bin}/${file}`), {
-    method: "PUT",
-    mode: "cors",
+    method: 'PUT',
+    mode: 'cors',
     body: JSON.stringify(content),
   });
-  return req.ok || Promise.reject(new Error("Failed to update file metadata"));
+  return req.ok || Promise.reject(new Error('Failed to update file metadata'));
 }
 
 /**
@@ -113,7 +103,5 @@ export async function writeMetadata(bin, file, content) {
  */
 export async function readMetadata(bin, file) {
   const req = await fetch(u(`/meta/${bin}/${file}`), g);
-  return req.ok
-    ? await req.json()
-    : Promise.reject(new Error("Failed to fetch file metadata"));
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to fetch file metadata'));
 }

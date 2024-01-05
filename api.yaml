@@ -21,9 +21,9 @@ paths:
       summary: Create a bin
       operationId: createBin
       responses:
-        "200":
+        '200':
           description: Successful operation
-        "500":
+        '500':
           description: An error
 
   /bin/{binId}:
@@ -39,9 +39,9 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: OK
-        "500":
+        '500':
           description: Unable to remove this bin
     delete:
       tags:
@@ -55,9 +55,9 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: OK
-        "500":
+        '500':
           description: Unable to remove this bin
   /f/{binId}:
     post:
@@ -72,9 +72,9 @@ paths:
           schema:
             type: string
       responses:
-        "201":
+        '201':
           description: File created, ready to upload
-        "500":
+        '500':
           description: Failed to create the file
   /meta/{binId}/{fileId}:
     get:
@@ -94,9 +94,9 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: File metadata
-        "404":
+        '404':
           description: File not found
     put:
       tags:
@@ -114,11 +114,11 @@ paths:
           required: true
           schema:
             type: string
-    responses:
-      "202":
-        description: File metadata updated
-      "404":
-        description: File not found
+      responses:
+        '202':
+          description: File metadata updated
+        '404':
+          description: File not found
   /f/{binId}/{fileId}:
     get:
       tags:
@@ -137,24 +137,29 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: The file content
-        "404":
+        '404':
           description: File not found
     put:
       tags:
         - file
       summary: Update a file
-      description: ""
+      description: ''
       operationId: writeFile
       parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
         - name: fileId
           in: path
           required: true
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: OK
     delete:
       tags:
@@ -162,11 +167,16 @@ paths:
       summary: Remove a file
       operationId: removeFile
       parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
         - name: fileId
           in: path
           required: true
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: OK
