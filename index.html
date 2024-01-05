@@ -16,7 +16,7 @@
         createFile,
         writeFile,
         removeFile,
-      } from "https://bin.homebots.io/index.mjs";
+      } from "/index.mjs";
 
       const oneKB = 1024;
       const oneMB = oneKB * 1024;
@@ -129,11 +129,8 @@
       async function uploadFiles(files) {
         for (const file of files) {
           const { fileId } = await createFile(binId);
-          await writeMetadata(binId, fileId, {
-            name: file.name,
-            "content-type": file.type,
-            "last-modified": file.lastModified,
-          });
+          const { name, type, lastModified } = file;
+          await writeMetadata(binId, fileId, { name, type, lastModified });
           await writeFile(binId, fileId, file);
           addFileToList(binId, fileId);
         }
@@ -225,7 +222,7 @@
       </div>
     </div>
 
-    <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+    <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 hidden">
       <div class="flex items-center justify-between">
         <h1 class="font-semibold text-lg md:text-2xl">Your Files</h1>
         <button
@@ -271,26 +268,12 @@
       </div>
     </main>
     <aside class="flex flex-1 items-center justify-center hidden" id="newbin">
+      <img src="/assets/empty.png" alt="Empty bin" />
       <button
-        class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground ml-auto h-8 w-8"
+        class="py-2 px-4 text-white inline-flex rounded-md text-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none border border-input bg-blue-500"
         id="addbin"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="h-4 w-4"
-        >
-          <path d="M5 12h14"></path>
-          <path d="M12 5v14"></path>
-        </svg>
-        <span> Create file bin </span>
+        Create file bin
       </button>
     </aside>
     <dialog id="filedialog">

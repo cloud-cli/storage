@@ -33,19 +33,17 @@ const createRoutes: (dir: string) => Record<string, RouteHandler> = (
     }
 
     tryCatch(res, async () => {
-      if (existsSync(metaPath)) {
-        const metaContent = await readFile(metaPath, "utf-8");
-        const meta = JSON.parse(metaContent);
-
-        Object.entries(meta).forEach(([key, value]) =>
-          res.setHeader(key, String(value))
-        );
-      }
-
+      const meta = await readMeta(metaPath);
       const stats = await stat(filePath);
+
+      Object.entries(meta).forEach(([key, value]) =>
+        res.setHeader(key == "type" ? "content-type" : key, String(value))
+      );
+
       res.setHeader("content-length", stats.size);
       res.setHeader("last-modified", new Date(stats.mtime).toString());
-      createReadStream(join(rootDir, binId, fileId)).pipe(res);
+
+      createReadStream(filePath).pipe(res);
     });
   },
 
