@@ -16,12 +16,14 @@
         createFile,
         writeFile,
         removeFile,
-      } from '/index.mjs';
+      } from "/index.mjs";
 
       const oneKB = 1024;
       const oneMB = oneKB * 1024;
       const oneGB = oneMB * 1024;
-      const binId = new URL(location.href).searchParams.get('bin');
+      const binId =
+        new URL(location.href).searchParams.get("bin") ||
+        localStorage.getItem("binId");
 
       const fileSize = (bytes) => {
         if (bytes < oneKB) {
@@ -36,94 +38,95 @@
           return `${(bytes / oneMB).toFixed(2)}MB`;
         }
 
-        return 'WTF?';
+        return "WTF?";
       };
 
-      const fileDate = (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
+      const fileDate = (d) =>
+        new Date(d).toISOString().slice(0, 19).replace("T", " ");
 
       function createRow(file) {
         return `<tr
-  class="border-b transition-colors hover:bg-gray-100"
-  data-bin="${file.bin}" data-id="${file.id}"
-  >
-  <td
-    class="px-4 py-2 align-middle font-medium"
-  >
-    ${file.name}
-  </td>
-  <td class="px-4 py-2 align-middle hidden md:table-cell">
-    ${fileDate(file.lastModified)}
-  </td>
-  <td class="px-4 py-2 align-middle hidden md:table-cell">
-    ${fileSize(file.size)}
-  </td>
-  <td
-    class="px-4 align-middle text-right"
-  >
-    <div class="flex"><a
-        class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-        target="_blank" href="${file.url}"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="h-4 w-4"
+      class="border-b transition-colors hover:bg-gray-100"
+      data-bin="${file.bin}" data-id="${file.id}"
       >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" x2="12" y1="15" y2="3"></line>
-        </svg>
-      <span class="sr-only">Download</span>
-    </a>
-    <button
-        class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-        onclick="onDeleteFile('${file.bin}', '${file.id}')">
-        <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="h-4 w-4"
+      <td
+        class="px-4 py-2 align-middle font-medium"
+      >
+        ${file.name}
+      </td>
+      <td class="px-4 py-2 align-middle hidden md:table-cell">
+        ${fileDate(file.lastModified)}
+      </td>
+      <td class="px-4 py-2 align-middle hidden md:table-cell">
+        ${fileSize(file.size)}
+      </td>
+      <td
+        class="px-4 align-middle text-right"
+      >
+        <div class="flex"><a
+            class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+            target="_blank" href="${file.url}"
         >
-        <path d="M3 6h18"></path>
-        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-        </svg>
-    </button></div>
-  </td>
-  </tr>`;
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" x2="12" y1="15" y2="3"></line>
+            </svg>
+          <span class="sr-only">Download</span>
+        </a>
+        <button
+            class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+            onclick="onDeleteFile('${file.bin}', '${file.id}')">
+            <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+            >
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+        </button></div>
+      </td>
+      </tr>`;
       }
 
       const editBtn = `<button class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
-        <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="h-4 w-4"
-        >
-        <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"></path>
-        </svg>
-    </button>`;
+            <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+            >
+            <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"></path>
+            </svg>
+        </button>`;
 
       /**
        * @param {File[]} files
@@ -148,15 +151,21 @@
           return;
         }
 
-        const rows = document.querySelector('#filelist');
+        const rows = document.querySelector("#filelist");
         const fileList = await listFiles(binId);
 
-        rows.innerHTML = '';
+        rows.innerHTML = "";
 
         fileList.forEach((fileId) => addFileToList(binId, fileId));
       }
 
-      window.addEventListener('DOMContentLoaded', () => {
+      function getBinUrl() {
+        const url = new URL(location.href);
+        url.searchParams.set("bin", binId);
+        return String(url);
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
         function onUpload(e) {
           e.preventDefault();
           e.stopPropagation();
@@ -166,30 +175,38 @@
 
         async function onAddBin() {
           const { binId } = await createBin();
-          const url = new URL(location.href);
-          url.searchParams.set('bin', binId);
-          location.href = String(url);
+          localStorage.setItem("binId", binId);
+          location.href = getBinUrl();
+        }
+
+        async function onCopyUrl(e) {
+          e.preventDefault();
+          navigator.clipboard.writeText(getBinUrl());
         }
 
         window.onDeleteFile = async function (bin, file) {
-          if (confirm('Are you sure?')) {
+          if (confirm("Are you sure?")) {
             await removeFile(bin, file);
             const row = document.querySelector(`[data-id="${file}"]`);
             row && row.remove();
           }
         };
 
-        heading.addEventListener('click', updateList);
-        uploadform.addEventListener('submit', onUpload);
-        fileuploadbutton.addEventListener('click', () => filedialog.showModal());
-        uploadclosebutton.addEventListener('click', () => filedialog.close());
+        heading.addEventListener("click", updateList);
+        uploadform.addEventListener("submit", onUpload);
+        fileuploadbutton.addEventListener("click", () =>
+          filedialog.showModal()
+        );
+        uploadclosebutton.addEventListener("click", () => filedialog.close());
 
         if (!binId) {
-          newbin.classList.remove('hidden');
-          document.querySelector('main').classList.add('hidden');
-          addbin.addEventListener('click', onAddBin);
+          newbin.classList.remove("hidden");
+          document.querySelector("main").classList.add("hidden");
+          addbin.addEventListener("click", onAddBin);
         } else {
-          binid.innerText = binId;
+          binurl.innerText = binId;
+          binurl.addEventListener("click", onCopyUrl);
+          binurl.href = getBin†Url();
         }
 
         updateList();
@@ -216,8 +233,8 @@
           ></path>
         </svg>
         <span class="font-bold hidden md:inline">File Bin</span>
-        <span class="ml-4 text-xs rounded" id="binid"></span>
       </a>
+      <a href="#" class="ml-4 text-xs rounded" id="binurl"></a>
     </div>
 
     <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -239,14 +256,26 @@
         <table class="w-full caption-bottom text-sm">
           <thead class="[&_tr]:border-b">
             <tr class="border-b transition-colors">
-              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground">File Name</th>
-              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell">
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground"
+              >
+                File Name
+              </th>
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
+              >
                 Last modified
               </th>
-              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell">
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
+              >
                 Size
               </th>
-              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground w-1">&nbsp;</th>
+              <th
+                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground w-1"
+              >
+                &nbsp;
+              </th>
             </tr>
           </thead>
           <tbody class="[&_tr:last-child]:border-0" id="filelist"></tbody>
@@ -255,7 +284,11 @@
     </main>
     <aside class="flex flex-1 items-center justify-center hidden" id="newbin">
       <div class="flex flex-col items-center p-8 bg-gray-100 rounded-lg">
-        <h1 class="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none mb-6">You don't have a bin yet!</h1>
+        <h1
+          class="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none mb-6"
+        >
+          You don't have a bin yet!
+        </h1>
         <p class="text-xl mb-12">Let's create one for you.</p>
         <button
           class="py-2 px-4 text-white inline-flex rounded-md text-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none border-0 bg-blue-500"
@@ -276,7 +309,12 @@
         style="pointer-events: auto"
       >
         <div class="flex flex-col space-y-1.5 text-center sm:text-left">
-          <h2 id="radix-:uploadH1:" class="text-lg font-semibold leading-none tracking-tight mb-4">Upload File</h2>
+          <h2
+            id="radix-:uploadH1:"
+            class="text-lg font-semibold leading-none tracking-tight mb-4"
+          >
+            Upload File
+          </h2>
           <p id="radix-:uploadH2:" class="text-sm text-muted-foreground">
             Drag and drop your files here or click to select files.
           </p>
@@ -297,7 +335,9 @@
             />
           </div>
         </div>
-        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+        <div
+          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2"
+        >
           <button
             class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-500 text-white px-4 py-2"
             type="submit"
