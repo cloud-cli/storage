@@ -39,9 +39,18 @@ export async function listFiles(bin) {
  * @returns {Promise<ArrayBuffer>} zip file
  */
 export async function downloadZip(bin) {
-  const req = await fetch(u(`/zip/${bin}`), g);
+  const req = await fetch(getDownloadUrl(bin), g);
 
   return req.ok ? await req : Promise.reject(new Error('Failed to generate a zip for this bin'));
+}
+
+/**
+ * Returns an URL pointing to a zip with the entire bin
+ * @param {string} bin
+ * @returns {string} url
+ */
+export function getDownloadUrl(bin) {
+  return u(`/zip/${bin}`).toString();
 }
 
 /**
