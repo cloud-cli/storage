@@ -16,14 +16,12 @@
         createFile,
         writeFile,
         removeFile,
-      } from "/index.mjs";
+      } from '/index.mjs';
 
       const oneKB = 1024;
       const oneMB = oneKB * 1024;
       const oneGB = oneMB * 1024;
-      const binId =
-        new URL(location.href).searchParams.get("bin") ||
-        localStorage.getItem("binId");
+      const binId = new URL(location.href).searchParams.get('bin') || localStorage.getItem('binId');
 
       const fileSize = (bytes) => {
         if (bytes < oneKB) {
@@ -38,11 +36,10 @@
           return `${(bytes / oneMB).toFixed(2)}MB`;
         }
 
-        return "WTF?";
+        return 'WTF?';
       };
 
-      const fileDate = (d) =>
-        new Date(d).toISOString().slice(0, 19).replace("T", " ");
+      const fileDate = (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
 
       function createRow(file) {
         return `<tr
@@ -151,21 +148,21 @@
           return;
         }
 
-        const rows = document.querySelector("#filelist");
+        const rows = document.querySelector('#filelist');
         const fileList = await listFiles(binId);
 
-        rows.innerHTML = "";
+        rows.innerHTML = '';
 
         fileList.forEach((fileId) => addFileToList(binId, fileId));
       }
 
       function getBinUrl() {
         const url = new URL(location.href);
-        url.searchParams.set("bin", binId);
+        url.searchParams.set('bin', binId);
         return String(url);
       }
 
-      window.addEventListener("DOMContentLoaded", () => {
+      window.addEventListener('DOMContentLoaded', () => {
         function onUpload(e) {
           e.preventDefault();
           e.stopPropagation();
@@ -175,7 +172,7 @@
 
         async function onAddBin() {
           const { binId } = await createBin();
-          localStorage.setItem("binId", binId);
+          localStorage.setItem('binId', binId);
           location.href = getBinUrl();
         }
 
@@ -185,27 +182,26 @@
         }
 
         window.onDeleteFile = async function (bin, file) {
-          if (confirm("Are you sure?")) {
+          if (confirm('Are you sure?')) {
             await removeFile(bin, file);
             const row = document.querySelector(`[data-id="${file}"]`);
             row && row.remove();
           }
         };
 
-        heading.addEventListener("click", updateList);
-        uploadform.addEventListener("submit", onUpload);
-        fileuploadbutton.addEventListener("click", () =>
-          filedialog.showModal()
-        );
-        uploadclosebutton.addEventListener("click", () => filedialog.close());
+        heading.addEventListener('click', updateList);
+        uploadform.addEventListener('submit', onUpload);
+        fileuploadbutton.addEventListener('click', () => filedialog.showModal());
+        filedownloadbutton.addEventListener('click', () => window.open('/zip/' + binId, '_blank'));
+        uploadclosebutton.addEventListener('click', () => filedialog.close());
 
         if (!binId) {
-          newbin.classList.remove("hidden");
-          document.querySelector("main").classList.add("hidden");
-          addbin.addEventListener("click", onAddBin);
+          newbin.classList.remove('hidden');
+          document.querySelector('main').classList.add('hidden');
+          addbin.addEventListener('click', onAddBin);
         } else {
           binurl.innerText = binId;
-          binurl.addEventListener("click", onCopyUrl);
+          binurl.addEventListener('click', onCopyUrl);
           binurl.href = getBinUrl();
         }
 
@@ -240,42 +236,43 @@
     <main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div class="flex items-center justify-between">
         <h1 class="font-semibold text-lg md:text-2xl">Your Files</h1>
-        <button
-          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-blue-500 text-white hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 border-0"
-          type="button"
-          id="fileuploadbutton"
-          aria-haspopup="dialog"
-          aria-expanded="false"
-          aria-controls="radix-:upload:"
-          data-state="closed"
-        >
-          Upload File
-        </button>
+        <div>
+          <button
+            class="inline-flex items-center justify-center rounded text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-blue-500 text-white hover:bg-accent hover:text-accent-foreground h-8 px-3 py-1 border-0"
+            type="button"
+            id="fileuploadbutton"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="radix-:upload:"
+            data-state="closed"
+          >
+            Upload Files
+          </button>
+          <button
+            class="inline-flex items-center justify-center rounded text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-blue-500 text-blue-500 hover:bg-accent hover:text-accent-foreground h-8 px-3 py-1"
+            type="button"
+            id="filedownloadbutton"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="radix-:upload:"
+            data-state="closed"
+          >
+            Download (zip)
+          </button>
+        </div>
       </div>
       <div class="border shadow-sm rounded-md">
         <table class="w-full caption-bottom text-sm">
           <thead class="[&_tr]:border-b">
             <tr class="border-b transition-colors">
-              <th
-                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground"
-              >
-                File Name
-              </th>
-              <th
-                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
-              >
+              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground">File Name</th>
+              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell">
                 Last modified
               </th>
-              <th
-                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell"
-              >
+              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground hidden md:table-cell">
                 Size
               </th>
-              <th
-                class="h-12 px-4 text-left align-middle font-bold text-muted-foreground w-1"
-              >
-                &nbsp;
-              </th>
+              <th class="h-12 px-4 text-left align-middle font-bold text-muted-foreground w-1">&nbsp;</th>
             </tr>
           </thead>
           <tbody class="[&_tr:last-child]:border-0" id="filelist"></tbody>
@@ -284,11 +281,7 @@
     </main>
     <aside class="flex flex-1 items-center justify-center hidden" id="newbin">
       <div class="flex flex-col items-center p-8 bg-gray-100 rounded-lg">
-        <h1
-          class="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none mb-6"
-        >
-          You don't have a bin yet!
-        </h1>
+        <h1 class="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none mb-6">You don't have a bin yet!</h1>
         <p class="text-xl mb-12">Let's create one for you.</p>
         <button
           class="py-2 px-4 text-white inline-flex rounded-md text-md font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none border-0 bg-blue-500"
@@ -309,12 +302,7 @@
         style="pointer-events: auto"
       >
         <div class="flex flex-col space-y-1.5 text-center sm:text-left">
-          <h2
-            id="radix-:uploadH1:"
-            class="text-lg font-semibold leading-none tracking-tight mb-4"
-          >
-            Upload File
-          </h2>
+          <h2 id="radix-:uploadH1:" class="text-lg font-semibold leading-none tracking-tight mb-4">Upload File</h2>
           <p id="radix-:uploadH2:" class="text-sm text-muted-foreground">
             Drag and drop your files here or click to select files.
           </p>
@@ -335,9 +323,7 @@
             />
           </div>
         </div>
-        <div
-          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2"
-        >
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
           <button
             class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-500 text-white px-4 py-2"
             type="submit"

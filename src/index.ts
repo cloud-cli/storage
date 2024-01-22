@@ -223,14 +223,15 @@ async function onDownloadZip(_req, res, args) {
     const files = allFiles.filter((f) => !f.endsWith('.meta'));
 
     res.setHeader('content-type', 'application/x-zip');
+    res.setHeader('Content-Disposition', `attachment; filename="archive-${binId.slice(0, 8)}.zip"`);
     zip.outputStream.pipe(res);
 
     for (const fileId of files) {
       const filePath = join(rootDir, binId, fileId);
       const metaPath = filePath + '.meta';
       const meta = await readMeta(metaPath);
-      const fileName = meta.name || fileId;
       const buffer = await readFile(filePath);
+      const fileName = meta.name || fileId;
       zip.addBuffer(buffer, fileName);
     }
 
@@ -253,7 +254,7 @@ async function tryCatch(res, fn) {
 
 function getProxyHost(req: IncomingMessage) {
   return new URL(
-    `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-for'] || 'localhost'}`,
+    `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-for'] || req.headers.host}`,
   ).toString();
 }
 
@@ -286,10 +287,12 @@ const match = router({
   'POST /bin': onCreateBin,
   'GET /bin/:binId': onReadBin,
   'DELETE /bin/:binId': onDeleteBin,
-  'POST /f:binId': onCreateFile,
+
+  'POST /f/:binId': onCreateFile,
   'GET /f/:binId/:fileId': onReadFile,
   'PUT /f/:binId/:fileId': onWriteFile,
   'DELETE /f/:binId/:fileId': onDeleteFile,
+
   'GET /meta/:binId/:fileId': onReadMetadata,
   'PUT /meta/:binId/:fileId': onWriteMetadata,
   'GET /zip/:binId': onDownloadZip,
