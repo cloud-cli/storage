@@ -1,213 +1,226 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { IncomingMessage } from 'node:http';
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeFile, readFile, mkdir, readdir, stat, rm, unlink } from 'node:fs/promises';
+import router from 'micro-router';
 
-type RouteHandler = (p: { req: IncomingMessage; res: ServerResponse; url: URL; args: string[] }) => void;
+const rootDir = process.env.ROOT_DIR;
+export type Options = { port?: Number };
 
-const createRoutes: (dir: string) => Record<string, RouteHandler> = (rootDir) => ({
-  async onReadFile({ args, res }) {
-    const [binId = '', fileId = ''] = args;
-    const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + '.meta';
+async function onReadFile(_req, res, args) {
+  const { binId = '', fileId = '' } = args;
+  const filePath = join(rootDir, binId, fileId);
+  const metaPath = filePath + '.meta';
 
-    if (!(binId && fileId && existsSync(filePath))) {
-      return notFound(res);
+  if (!(binId && fileId && existsSync(filePath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    const meta = await readMeta(metaPath);
+    const stats = await stat(filePath);
+
+    Object.entries(meta).forEach(([key, value]) => res.setHeader(key == 'type' ? 'content-type' : key, String(value)));
+
+    res.setHeader('content-length', stats.size);
+    res.setHeader('last-modified', new Date(stats.mtime).toString());
+
+    createReadStream(filePath).pipe(res);
+  });
+}
+
+async function onReadMetadata(req, res, args) {
+  const { binId = '', fileId = '' } = args;
+  const filePath = join(rootDir, binId, fileId);
+  const metaPath = filePath + '.meta';
+
+  if (!(binId && fileId && existsSync(filePath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    const meta = await readMeta(metaPath);
+    const stats = await stat(filePath);
+    const baseUrl = getProxyHost(req);
+
+    res.setHeader('content-type', 'application/json');
+    res.end(
+      JSON.stringify({
+        ...meta,
+        id: fileId,
+        bin: binId,
+        size: stats.size,
+        name: meta.name || fileId,
+        lastModified: new Date(stats.mtime).toISOString(),
+        url: String(new URL(`/f/${binId}/${fileId}`, baseUrl)),
+      }),
+    );
+  });
+}
+
+async function onWriteMetadata(req, res, args) {
+  const { binId = '', fileId = '' } = args;
+  const filePath = join(rootDir, binId, fileId);
+  const metaPath = filePath + '.meta';
+
+  if (!(binId && fileId && existsSync(filePath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    const payload = await readStream(req);
+    const meta = payload.toString('utf-8').trim();
+
+    if (meta) {
+      await writeFile(metaPath, JSON.stringify(JSON.parse(meta)));
+      const url = String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)));
+      res.writeHead(202).end(JSON.stringify({ url }));
+      return;
     }
 
-    tryCatch(res, async () => {
-      const meta = await readMeta(metaPath);
-      const stats = await stat(filePath);
+    res.writeHead(400).end();
+  });
+}
 
-      Object.entries(meta).forEach(([key, value]) =>
-        res.setHeader(key == 'type' ? 'content-type' : key, String(value)),
-      );
+async function onCreateFile(req, res, args) {
+  const { binId = '' } = args;
+  const binPath = join(rootDir, binId);
 
-      res.setHeader('content-length', stats.size);
-      res.setHeader('last-modified', new Date(stats.mtime).toString());
+  if (!(binId && existsSync(binPath))) {
+    return notFound(res);
+  }
 
-      createReadStream(filePath).pipe(res);
-    });
-  },
+  tryCatch(res, async () => {
+    const payload = await readStream(req);
+    const fileId = randomUUID();
+    const meta = payload.toString('utf-8');
 
-  async onReadMetadata({ args, req, res }) {
-    const [binId = '', fileId = ''] = args;
-    const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + '.meta';
-
-    if (!(binId && fileId && existsSync(filePath))) {
-      return notFound(res);
+    if (meta) {
+      await writeFile(join(binPath, fileId + '.meta'), JSON.stringify(JSON.parse(meta)));
     }
 
-    tryCatch(res, async () => {
-      const meta = await readMeta(metaPath);
-      const stats = await stat(filePath);
-      const baseUrl = getProxyHost(req);
+    await writeFile(join(binPath, fileId), '');
 
-      res.setHeader('content-type', 'application/json');
-      res.end(
-        JSON.stringify({
-          ...meta,
-          id: fileId,
-          bin: binId,
-          size: stats.size,
-          name: meta.name || fileId,
-          lastModified: new Date(stats.mtime).toISOString(),
-          url: String(new URL(`/f/${binId}/${fileId}`, baseUrl)),
-        }),
-      );
-    });
-  },
+    res.setHeader('location', String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))));
+    res.writeHead(201).end(`{"fileId": "${fileId}"}`);
+  });
+}
 
-  async onWriteMetadata({ args, req, res }) {
-    const [binId = '', fileId = ''] = args;
-    const filePath = join(rootDir, binId, fileId);
-    const metaPath = filePath + '.meta';
+function onWriteFile(req, res, args) {
+  const { binId = '', fileId = '' } = args;
+  const filePath = join(rootDir, binId, fileId);
 
-    if (!(binId && fileId && existsSync(filePath))) {
-      return notFound(res);
+  if (!(binId && fileId && existsSync(filePath))) {
+    return notFound(res);
+  }
+
+  const writer = createWriteStream(filePath);
+
+  writer.on('close', () => {
+    res.writeHead(202);
+    res.end(
+      JSON.stringify({
+        id: fileId,
+        bin: binId,
+        url: String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))),
+      }),
+    );
+  });
+
+  req.pipe(writer);
+}
+
+async function onReadBin(_req, res, args) {
+  const { binId = '' } = args;
+  const binPath = join(rootDir, binId);
+
+  if (!(binId && existsSync(binPath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    const allFiles = await readdir(binPath);
+    const files = allFiles.filter((f) => !f.endsWith('.meta'));
+    res.end(JSON.stringify(files));
+  });
+}
+
+function onCreateBin(req, res) {
+  tryCatch(res, () => {
+    const binId = randomUUID();
+    ensureDir(join(rootDir, binId));
+    res.setHeader('location', String(new URL('/bin/' + binId, getProxyHost(req))));
+    res.writeHead(201).end(`{"binId": "${binId}"}`);
+  });
+}
+
+async function onDeleteFile(_req, res, args) {
+  const { binId = '', file = '' } = args;
+  const filePath = join(rootDir, binId, file);
+  const metaPath = join(rootDir, binId, file + '.meta');
+
+  if (!(binId && file && existsSync(filePath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    await unlink(filePath);
+
+    if (existsSync(metaPath)) {
+      await unlink(metaPath);
     }
 
-    tryCatch(res, async () => {
-      const payload = await readStream(req);
-      const meta = payload.toString('utf-8').trim();
+    res.end('OK');
+  });
+}
 
-      if (meta) {
-        await writeFile(metaPath, JSON.stringify(JSON.parse(meta)));
-        const url = String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req)));
-        res.writeHead(202).end(JSON.stringify({ url }));
-        return;
-      }
+async function onDeleteBin(_req, res, args) {
+  const { binId = '' } = args;
+  const binPath = join(rootDir, binId);
 
-      res.writeHead(400).end();
-    });
-  },
+  if (!(binId && existsSync(binPath))) {
+    return notFound(res);
+  }
 
-  async onCreateFile({ args, req, res }) {
-    const [binId = ''] = args;
-    const binPath = join(rootDir, binId);
+  tryCatch(res, async () => {
+    await rm(binPath, { recursive: true });
+    res.end('OK');
+  });
+}
 
-    if (!(binId && existsSync(binPath))) {
-      return notFound(res);
-    }
+async function onApiSpec(req, res) {
+  const host = getProxyHost(req);
+  const spec = await readFile('./api.yaml', 'utf-8');
+  res.end(spec.replace('__API_HOST__', host));
+}
 
-    tryCatch(res, async () => {
-      const payload = await readStream(req);
-      const fileId = randomUUID();
-      const meta = payload.toString('utf-8');
+async function onEsModule(req, res) {
+  const host = getProxyHost(req);
+  const file = await readFile('./filebin.mjs', 'utf-8');
+  res.setHeader('content-type', 'text/javascript');
+  res.end(file.replace('__API_HOST__', host));
+}
 
-      if (meta) {
-        await writeFile(join(binPath, fileId + '.meta'), JSON.stringify(JSON.parse(meta)));
-      }
+async function onGetUI(_req, res) {
+  res.setHeader('content-type', 'text/html');
+  createReadStream('./index.html').pipe(res);
+}
 
-      await writeFile(join(binPath, fileId), '');
-
-      res.setHeader('location', String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))));
-      res.writeHead(201).end(`{"fileId": "${fileId}"}`);
-    });
-  },
-
-  onWriteFile({ args, req, res }) {
-    const [binId = '', fileId = ''] = args;
-    const filePath = join(rootDir, binId, fileId);
-
-    if (!(binId && fileId && existsSync(filePath))) {
-      return notFound(res);
-    }
-
-    const writer = createWriteStream(filePath);
-
-    writer.on('close', () => {
-      res.writeHead(202);
-      res.end(
-        JSON.stringify({
-          id: fileId,
-          bin: binId,
-          url: String(new URL(`/f/${binId}/${fileId}`, getProxyHost(req))),
-        }),
-      );
-    });
-
-    req.pipe(writer);
-  },
-
-  async onReadBin({ args, res }) {
-    const [binId = ''] = args;
-    const binPath = join(rootDir, binId);
-
-    if (!(binId && existsSync(binPath))) {
-      return notFound(res);
-    }
-
-    tryCatch(res, async () => {
-      const allFiles = await readdir(binPath);
-      const files = allFiles.filter((f) => !f.endsWith('.meta'));
-      res.end(JSON.stringify(files));
-    });
-  },
-
-  onCreateBin({ req, res }) {
-    tryCatch(res, () => {
-      const binId = randomUUID();
-      ensureDir(join(rootDir, binId));
-      res.setHeader('location', String(new URL('/bin/' + binId, getProxyHost(req))));
-      res.writeHead(201).end(`{"binId": "${binId}"}`);
-    });
-  },
-
-  async onDeleteFile({ res, args }) {
-    const [binId = '', file = ''] = args;
-    const filePath = join(rootDir, binId, file);
-    const metaPath = join(rootDir, binId, file + '.meta');
-
-    if (!(binId && file && existsSync(filePath))) {
-      return notFound(res);
-    }
-
-    tryCatch(res, async () => {
-      await unlink(filePath);
-
-      if (existsSync(metaPath)) {
-        await unlink(metaPath);
-      }
-
-      res.end('OK');
-    });
-  },
-
-  async onDeleteBin({ res, args }) {
-    const [binId = ''] = args;
-    const binPath = join(rootDir, binId);
-
-    if (!(binId && existsSync(binPath))) {
-      return notFound(res);
-    }
-
-    tryCatch(res, async () => {
-      await rm(binPath, { recursive: true });
-      res.end('OK');
-    });
-  },
-
-  async onApiSpec({ req, res }) {
-    const host = getProxyHost(req);
-    const spec = await readFile('./api.yaml', 'utf-8');
-    res.end(spec.replace('__API_HOST__', host));
-  },
-
-  async onEsModule({ req, res }) {
-    const host = getProxyHost(req);
-    const file = await readFile('./filebin.mjs', 'utf-8');
-    res.setHeader('content-type', 'text/javascript');
-    res.end(file.replace('__API_HOST__', host));
-  },
-
-  async onGetUI({ res }) {
-    res.setHeader('content-type', 'text/html');
-    createReadStream('./index.html').pipe(res);
-  },
+const match = router({
+  'GET /': onGetUI,
+  'GET /api': onApiSpec,
+  'GET /index.mjs': onEsModule,
+  'POST /bin': onCreateBin,
+  'GET /bin/:binId': onReadBin,
+  'DELETE /bin/:binId': onDeleteBin,
+  'POST /f:binId': onCreateFile,
+  'GET /f/:binId/:fileId': onReadFile,
+  'PUT /f/:binId/:fileId': onWriteFile,
+  'DELETE /f/:binId/:fileId': onDeleteFile,
+  'GET /meta/:binId/:fileId': onReadMetadata,
+  'PUT /meta/:binId/:fileId': onWriteMetadata,
 });
 
 function notFound(res) {
@@ -229,16 +242,10 @@ function getProxyHost(req: IncomingMessage) {
   ).toString();
 }
 
-export type Options = { port?: Number; rootDir?: string };
-
 export function start(options: Options = {}) {
-  const rootDir = process.env.ROOT_DIR || options.rootDir;
-
   if (!rootDir) {
     throw new Error('Cannot start without ROOT_DIR in environment.');
   }
-
-  const routes = createRoutes(rootDir);
 
   createServer((req, res) => {
     const _end = res.end;
@@ -248,51 +255,7 @@ export function start(options: Options = {}) {
       return _end.apply(res, args);
     };
 
-    const url = new URL(req.url, 'http://localhost');
-    const [action, ...args] = url.pathname.slice(1).split('/');
-    const p = { req, res, args, url };
-    const route = `${req.method} ${action}`.trim();
-
-    switch (route) {
-      case 'GET':
-        return routes.onGetUI(p);
-
-      case 'GET api':
-        return routes.onApiSpec(p);
-
-      case 'GET index.mjs':
-        return routes.onEsModule(p);
-
-      case 'GET f':
-        return routes.onReadFile(p);
-
-      case 'GET meta':
-        return routes.onReadMetadata(p);
-
-      case 'PUT meta':
-        return routes.onWriteMetadata(p);
-
-      case 'POST f':
-        return routes.onCreateFile(p);
-
-      case 'DELETE f':
-        return routes.onDeleteFile(p);
-
-      case 'PUT f':
-        return routes.onWriteFile(p);
-
-      case 'GET bin':
-        return routes.onReadBin(p);
-
-      case 'POST bin':
-        return routes.onCreateBin(p);
-
-      case 'DELETE bin':
-        return routes.onDeleteBin(p);
-
-      default:
-        notFound(res);
-    }
+    match(req, res);
   }).listen(Number(options.port || process.env.PORT));
 }
 
