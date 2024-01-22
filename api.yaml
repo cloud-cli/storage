@@ -59,6 +59,23 @@ paths:
           description: OK
         '500':
           description: Unable to remove this bin
+  /zip/{binId}:
+    get:
+      tags:
+        - bin
+      summary: Download all files in a bin as a single zip
+      operationId: downloadZip
+      parameters:
+        - name: binId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: Unable to generate a zip for this bin
   /f/{binId}:
     post:
       tags:

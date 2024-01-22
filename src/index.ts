@@ -5,6 +5,7 @@ import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeFile, readFile, mkdir, readdir, stat, rm, unlink } from 'node:fs/promises';
 import router from 'micro-router';
+import * as yazl from 'yazl';
 
 const rootDir = process.env.ROOT_DIR;
 export type Options = { port?: Number };
@@ -208,20 +209,34 @@ async function onGetUI(_req, res) {
   createReadStream('./index.html').pipe(res);
 }
 
-const match = router({
-  'GET /': onGetUI,
-  'GET /api': onApiSpec,
-  'GET /index.mjs': onEsModule,
-  'POST /bin': onCreateBin,
-  'GET /bin/:binId': onReadBin,
-  'DELETE /bin/:binId': onDeleteBin,
-  'POST /f:binId': onCreateFile,
-  'GET /f/:binId/:fileId': onReadFile,
-  'PUT /f/:binId/:fileId': onWriteFile,
-  'DELETE /f/:binId/:fileId': onDeleteFile,
-  'GET /meta/:binId/:fileId': onReadMetadata,
-  'PUT /meta/:binId/:fileId': onWriteMetadata,
-});
+async function onDownloadZip(_req, res, args) {
+  const { binId = '' } = args;
+  const binPath = join(rootDir, binId);
+
+  if (!(binId && existsSync(binPath))) {
+    return notFound(res);
+  }
+
+  tryCatch(res, async () => {
+    const zip = new yazl.ZipFile();
+    const allFiles = await readdir(binPath);
+    const files = allFiles.filter((f) => !f.endsWith('.meta'));
+
+    res.setHeader('content-type', 'application/x-zip');
+    zip.outputStream.pipe(res);
+
+    for (const fileId of files) {
+      const filePath = join(rootDir, binId, fileId);
+      const metaPath = filePath + '.meta';
+      const meta = await readMeta(metaPath);
+      const fileName = meta.name || fileId;
+      const buffer = await readFile(filePath);
+      zip.addBuffer(buffer, fileName);
+    }
+
+    zip.end();
+  });
+}
 
 function notFound(res) {
   res.writeHead(404).end('Not found');
@@ -240,23 +255,6 @@ function getProxyHost(req: IncomingMessage) {
   return new URL(
     `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-for'] || 'localhost'}`,
   ).toString();
-}
-
-export function start(options: Options = {}) {
-  if (!rootDir) {
-    throw new Error('Cannot start without ROOT_DIR in environment.');
-  }
-
-  createServer((req, res) => {
-    const _end = res.end;
-
-    res.end = (...args) => {
-      console.log('[%s] %d %s %s', new Date().toISOString(), res.statusCode, req.method, req.url);
-      return _end.apply(res, args);
-    };
-
-    match(req, res);
-  }).listen(Number(options.port || process.env.PORT));
 }
 
 function readStream(stream): Promise<Buffer> {
@@ -279,6 +277,39 @@ async function readMeta(metaPath: string) {
   }
 
   return {};
+}
+
+const match = router({
+  'GET /': onGetUI,
+  'GET /api': onApiSpec,
+  'GET /index.mjs': onEsModule,
+  'POST /bin': onCreateBin,
+  'GET /bin/:binId': onReadBin,
+  'DELETE /bin/:binId': onDeleteBin,
+  'POST /f:binId': onCreateFile,
+  'GET /f/:binId/:fileId': onReadFile,
+  'PUT /f/:binId/:fileId': onWriteFile,
+  'DELETE /f/:binId/:fileId': onDeleteFile,
+  'GET /meta/:binId/:fileId': onReadMetadata,
+  'PUT /meta/:binId/:fileId': onWriteMetadata,
+  'GET /zip/:binId': onDownloadZip,
+});
+
+export function start(options: Options = {}) {
+  if (!rootDir) {
+    throw new Error('Cannot start without ROOT_DIR in environment.');
+  }
+
+  createServer((req, res) => {
+    const _end = res.end;
+
+    res.end = (...args) => {
+      console.log('[%s] %d %s %s', new Date().toISOString(), res.statusCode, req.method, req.url);
+      return _end.apply(res, args);
+    };
+
+    match(req, res);
+  }).listen(Number(options.port || process.env.PORT));
 }
 
 export default start;

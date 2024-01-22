@@ -22,9 +22,11 @@
     "@cloud-cli/prettier-config": "^1.0.0",
     "@cloud-cli/typescript-config": "^1.0.0",
     "@types/node": "^20.10.6",
+    "@types/yazl": "^2.4.5",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "micro-router": "^1.0.1"
+    "micro-router": "^1.0.1",
+    "yazl": "^2.5.1"
   }
 }
