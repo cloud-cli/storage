@@ -210,7 +210,8 @@ async function onGetUI(_req, res) {
 }
 
 async function onDownloadZip(_req, res, args) {
-  const { binId = '' } = args;
+  let { binId = '' } = args;
+  binId = binId.replace('.zip', '');
   const binPath = join(rootDir, binId);
 
   if (!(binId && existsSync(binPath))) {

@@ -50,7 +50,7 @@ export async function downloadZip(bin) {
  * @returns {string} url
  */
 export function getDownloadUrl(bin) {
-  return u(`/zip/${bin}`).toString();
+  return u(`/zip/${bin}.zip`).toString();
 }
 
 /**
