@@ -156,9 +156,9 @@
         fileList.forEach((fileId) => addFileToList(binId, fileId));
       }
 
-      function getBinUrl() {
+      function getBinUrl(id) {
         const url = new URL(location.href);
-        url.searchParams.set('bin', binId);
+        url.searchParams.set('bin', id || binId);
         return String(url);
       }
 
@@ -173,7 +173,7 @@
         async function onAddBin() {
           const { binId } = await createBin();
           localStorage.setItem('binId', binId);
-          location.href = getBinUrl();
+          location.href = getBinUrl(binId);
         }
 
         async function onCopyUrl(e) {
