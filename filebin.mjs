@@ -39,9 +39,20 @@ export async function listFiles(bin) {
  * @returns {Promise<ArrayBuffer>} zip file
  */
 export async function downloadZip(bin) {
-  const req = await fetch(getDownloadUrl(bin), g);
+  const req = await fetch(getZipUrl(bin), g);
 
   return req.ok ? await req : Promise.reject(new Error('Failed to generate a zip for this bin'));
+}
+
+/**
+ * @param {string} bin
+ * @param {BodyInit} zipContent
+ * @returns {Promise<ArrayBuffer>} zip file
+ */
+export async function uploadZip(bin, zipContent) {
+  const req = await fetch(getZipUrl(bin), {...p, body: zipContent });
+
+  return req.ok ? await req.json() : Promise.reject(new Error('Failed to import a zip in this bin'));
 }
 
 /**
@@ -49,7 +60,7 @@ export async function downloadZip(bin) {
  * @param {string} bin
  * @returns {string} url
  */
-export function getDownloadUrl(bin) {
+export function getZipUrl(bin) {
   return u(`/zip/${bin}.zip`).toString();
 }
 

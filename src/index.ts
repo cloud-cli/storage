@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { writeFile, readFile, mkdir, readdir, stat, rm, unlink } from 'node:fs/promises';
 import router from 'micro-router';
 import * as yazl from 'yazl';
+import * as yauzl from 'yauzl';
 
 const rootDir = process.env.ROOT_DIR;
 export type Options = { port?: Number };
@@ -209,6 +210,76 @@ async function onGetUI(_req, res) {
   createReadStream('./index.html').pipe(res);
 }
 
+async function onUploadZip(req, res, args) {
+  const { binId = '' } = args;
+  const binPath = join(rootDir, binId);
+
+  if (!(binId && existsSync(binPath))) {
+    return notFound(res);
+  }
+
+  const uid = randomUUID();
+  const tmpFile = join(binPath, uid);
+
+  try {
+    await new Promise((resolve, reject) => {
+      req.on('end', () => {
+        const zipOptions = {
+          strictFileNames:true,
+          lazyEntries: true,
+          decodeStrings: true
+        };
+
+        yauzl.open(tmpFile, zipOptions, (err, zip) => {
+          if (err) {
+            return reject(err);
+          }
+
+          zip.on('error', (err) => reject(err));
+
+          zip.once('end', () => {
+            zip.close();
+            resolve(true);
+          });
+
+          zip.on('entry', (entry) => {
+            if (entry.fileName.endsWith('/')) {
+              zip.readEntry();
+              return;
+            }
+
+            zip.openReadStream(entry, async (err, readStream) => {
+              if (err) {
+                return reject(err);
+              }
+
+              readStream.on("end", () => zip.readEntry());
+
+              const fileId = randomUUID();
+              const meta = { name: entry.fileName };
+              const stream = createWriteStream(join(binPath, fileId));
+
+              await writeFile(join(binPath, fileId + '.meta'), JSON.stringify(meta));
+              readStream.pipe(stream);
+            });
+          });
+
+          zip.readEntry();
+        });
+      });
+
+      req.pipe(createWriteStream(tmpFile));
+    });
+
+    res.writeHead(202).end(`{"binId": "${binId}"}`);
+} catch (error) {
+    console.log(error);
+    res.writeHead(500).end();
+  } finally {
+    unlink(tmpFile);
+  }
+}
+
 async function onDownloadZip(_req, res, args) {
   let { binId = '' } = args;
   binId = binId.replace('.zip', '');
@@ -297,6 +368,7 @@ const match = router({
   'GET /meta/:binId/:fileId': onReadMetadata,
   'PUT /meta/:binId/:fileId': onWriteMetadata,
   'GET /zip/:binId': onDownloadZip,
+  'POST /zip/:binId': onUploadZip,
 });
 
 export function start(options: Options = {}) {
