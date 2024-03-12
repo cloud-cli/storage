@@ -7,6 +7,10 @@
     <meta name="theme-color" content="#e91e63" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
+      import * as bin from '/index.mjs';
+      window.bin = bin;
+    </script>
+    <script type="module">
       import {
         createBin,
         removeBin,
@@ -303,9 +307,9 @@
       >
         <div class="flex flex-col space-y-1.5 text-center sm:text-left">
           <h2 id="radix-:uploadH1:" class="text-lg font-semibold leading-none tracking-tight mb-4">Upload File</h2>
-          <p id="radix-:uploadH2:" class="text-sm text-muted-foreground">
+          <!-- <p id="radix-:uploadH2:" class="text-sm text-muted-foreground">
             Drag and drop your files here or click to select files.
-          </p>
+          </p> -->
         </div>
         <div class="grid gap-4 py-4">
           <div class="grid w-full gap-1.5">
